@@ -319,13 +319,16 @@
   const URL_PLANOS='modulos/planos/index.html';
   const URL_REMOD='../remodelaciones/index.html';
   let sb=null, userEmail='';
-  let clientes=[], allQuotes=[], dashPeriod='mes', cliDetailId=undefined;
+  let clientes=[], allQuotes=[], dashPeriod='mes', cliDetailId=undefined, ajustes={};
   try{ sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storage:window.localStorage}}); }catch(e){ console.error(e); }
 
   const $=id=>document.getElementById(id);
   const fmt=n=>'RD$ '+Number(Math.round(n||0)).toLocaleString('en-US');
   const fmtShort=n=>{ n=Number(n)||0; if(n>=1e6) return 'RD$ '+(n/1e6).toFixed(2)+'M'; if(n>=1e3) return 'RD$ '+Math.round(n/1e3)+'K'; return 'RD$ '+Math.round(n); };
   const esc=s=>String(s==null?'':s).replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  function empBrand(){ const n=(ajustes.nombre||'Laios Group').trim(); const p=n.split(' '); return '<span class="g">'+esc(p[0])+'</span>'+(p.length>1?' '+esc(p.slice(1).join(' ')):''); }
+  function empContacto(){ return [ajustes.rnc?'RNC '+ajustes.rnc:'', ajustes.telefono||'', ajustes.email||''].filter(Boolean).map(esc).join(' · '); }
+  function empNota(){ return esc(ajustes.nota_pie || ('Cotización sujeta a levantamiento en sitio. Válida por '+(ajustes.validez_dias||15)+' días.')); }
   const esUSD=r=>(r.moneda||'').toUpperCase()==='USD';
   const toast=(m,err)=>{const t=$('toast');t.textContent=m;t.className='toast show'+(err?' err':'');setTimeout(()=>t.className='toast',2200);};
 
@@ -405,12 +408,14 @@
   // ================= DATOS =================
   async function cargarTodo(){
     try{
-      const [cl,qc]=await Promise.all([
+      const [cl,qc,emp]=await Promise.all([
         sb.from('clientes').select('id,nombre,contacto,rnc').order('nombre'),
-        sb.from('cotizaciones').select('id,tipo,numero,cliente_id,cliente_nombre,proyecto,estado,moneda,total,created_at').order('created_at',{ascending:false})
+        sb.from('cotizaciones').select('id,tipo,numero,cliente_id,cliente_nombre,proyecto,estado,moneda,total,created_at').order('created_at',{ascending:false}),
+        sb.from('empresa').select('*').eq('id',1).single()
       ]);
       clientes=cl.data||[];
       allQuotes=(qc.data||[]).map(r=>({...r, tipo: r.tipo==='remodelacion'?'remod':r.tipo}));
+      if(emp.data) ajustes=emp.data;
       renderDash();
     }catch(e){ console.error(e); }
   }
@@ -585,7 +590,7 @@
     const nuevoAcap=()=>({nombre:'',items:[nuevoItem()]});
     const nuevaPart=()=>({nombre:'',desc:'',acapites:[nuevoAcap()]});
     const nuevoEsp=()=>({nombre:'',partidas:[nuevaPart()]});
-    const nuevaCot=()=>({cliente_id:null,cliente_nombre:'',proyecto:'',numero:'',estado:'borrador',moneda:'DOP',itbis:false,hon:{tipo:'pct',pct:15,monto:0},espacios:[nuevoEsp()]});
+    const nuevaCot=()=>({cliente_id:null,cliente_nombre:'',proyecto:'',numero:'',estado:'borrador',moneda:(ajustes.moneda_default||'DOP'),itbis:!!ajustes.itbis_default,hon:{tipo:'pct',pct:15,monto:0},espacios:[nuevoEsp()]});
 
     function volver(){ $$('remod-screen').classList.add('hide'); $$('rm-savebar').classList.add('hide'); $$('rm-preview').classList.add('hide'); cargarTodo(); }
     function nuevo(){ cur=nuevaCot(); curId=null; $$('remod-screen').classList.remove('hide'); renderEditor(); $$('rm-editor').scrollTop=0; }
@@ -716,14 +721,14 @@
     function renderPreview(){
       const espCli=cur.espacios.map(e=>{ const descs=e.partidas.map(p=>p.desc&&p.desc.trim()?p.desc.trim():'').filter(Boolean).join(' '); return '<div class="cl-esp"><div class="cl-top"><div class="cl-name">'+esc(e.nombre||'Espacio')+'</div><div class="cl-amt">'+fmt(espTot(e))+'</div></div>'+(descs?'<div class="cl-desc">'+esc(descs)+'</div>':'')+'</div>'; }).join('');
       const costos=costosTot(),hon=honMonto(),itb=itbisMonto(),total=totalFinal(),subCliente=costos+hon;
-      $$('rm-pv-cli').innerHTML='<div class="sheet" id="rm-sheet-cli"><div class="sh-brand"><span class="g">Laios</span> Group</div><div class="sh-tag">Arquitectura · Diseño · Construcción</div><div class="sh-meta"><div><div class="l">Cliente</div><div class="v">'+esc(cur.cliente_nombre||'—')+'</div><div class="l" style="margin-top:8px">Proyecto</div><div class="v">'+esc(cur.proyecto||'—')+'</div></div><div style="text-align:right"><div class="sh-doc">Cotización</div><div class="v" style="margin-top:8px">'+esc(cur.numero||'—')+'</div><div class="v">'+fechaHoy()+'</div></div></div>'+espCli+'<div class="sh-tot"><div class="sh-tr"><span>Subtotal</span><span>'+fmt(subCliente)+'</span></div>'+(cur.itbis?'<div class="sh-tr"><span>ITBIS (18%)</span><span>'+fmt(itb)+'</span></div>':'')+'<div class="sh-tr big"><span>Total</span><span class="tot-v">'+fmt(total)+'</span></div></div><div class="sh-note">Cotización sujeta a levantamiento en sitio. Válida por 15 días.</div></div>';
+      $$('rm-pv-cli').innerHTML='<div class="sheet" id="rm-sheet-cli"><div class="sh-brand">'+empBrand()+'</div><div class="sh-tag">'+(empContacto()||'Arquitectura · Diseño · Construcción')+'</div><div class="sh-meta"><div><div class="l">Cliente</div><div class="v">'+esc(cur.cliente_nombre||'—')+'</div><div class="l" style="margin-top:8px">Proyecto</div><div class="v">'+esc(cur.proyecto||'—')+'</div></div><div style="text-align:right"><div class="sh-doc">Cotización</div><div class="v" style="margin-top:8px">'+esc(cur.numero||'—')+'</div><div class="v">'+fechaHoy()+'</div></div></div>'+espCli+'<div class="sh-tot"><div class="sh-tr"><span>Subtotal</span><span>'+fmt(subCliente)+'</span></div>'+(cur.itbis?'<div class="sh-tr"><span>ITBIS (18%)</span><span>'+fmt(itb)+'</span></div>':'')+'<div class="sh-tr big"><span>Total</span><span class="tot-v">'+fmt(total)+'</span></div></div><div class="sh-note">'+empNota()+'</div></div>';
       const espInt=cur.espacios.map(e=>{ const parts=e.partidas.map(p=>{ const acaps=p.acapites.map(a=>{ const items=a.items.map(it=> it.pa?'<div class="in-item"><span class="d">'+esc(it.concepto||'—')+' <span class="pa-tag">PA</span></span><span class="q">precio alzado</span><span class="s">'+fmtN(itSub(it))+'</span></div>':'<div class="in-item"><span class="d">'+esc(it.concepto||'—')+'</span><span class="q">'+(Number(it.cant)||0)+' '+it.uni+' × '+fmtN(it.costo)+'</span><span class="s">'+fmtN(itSub(it))+'</span></div>').join(''); return '<div class="in-acap">'+esc(a.nombre||'—')+'</div>'+items; }).join(''); return '<div class="in-part">'+esc(p.nombre||'—')+'</div>'+acaps; }).join(''); return '<div class="in-esp"><div class="in-esp-h"><span>'+esc(e.nombre||'Espacio')+'</span><span class="t">'+fmt(espTot(e))+'</span></div>'+parts+'</div>'; }).join('');
       const map={}, paList=[];
       cur.espacios.forEach(e=>{ const en=e.nombre||'Espacio'; e.partidas.forEach(p=>p.acapites.forEach(a=>a.items.forEach(it=>{ if(it.pa){ if(itSub(it)>0) paList.push({c:it.concepto||'—',e:en,m:itSub(it)}); return; } const cant=Number(it.cant)||0; if(!cant) return; const key=(it.concepto||'—').trim().toLowerCase()+'|'+it.uni; if(!map[key]) map[key]={c:it.concepto||'—',u:it.uni,total:0,porEsp:{}}; map[key].total+=cant; map[key].porEsp[en]=(map[key].porEsp[en]||0)+cant; }))); });
       const shopRows=Object.values(map).map(m=>{ const bd=Object.entries(m.porEsp).map(([en,q])=>fmtN(q)+' '+en).join(' + '); return '<div class="shop-item"><div class="d">'+esc(m.c)+'<div class="b">'+esc(bd)+'</div></div><div class="s">'+fmtN(m.total)+' '+m.u+'</div></div>'; }).join('');
       const paRows=paList.map(x=>'<div class="shop-item"><div class="d">'+esc(x.c)+' <span class="pa-tag">PA</span><div class="b">'+esc(x.e)+'</div></div><div class="s">'+fmt(x.m)+'</div></div>').join('');
       const shopHTML='<div class="shop"><div class="shop-h">Lista de compra consolidada</div>'+(shopRows||'<div class="in-item">Sin materiales por cantidad.</div>')+(paRows?'<div class="in-acap" style="margin-top:8px">Precios alzados</div>'+paRows:'')+'</div>';
-      $$('rm-pv-int').innerHTML='<div class="sheet" id="rm-sheet-int"><div class="sh-brand"><span class="g">Laios</span> <span style="color:var(--ink)">·</span> interno</div><div class="sh-tag">Hoja de compra y presupuesto</div><div class="sh-meta"><div><div class="l">Proyecto</div><div class="v">'+esc(cur.proyecto||'—')+'</div></div><div style="text-align:right"><div class="sh-doc">'+esc(cur.numero||'—')+'</div><div class="v" style="margin-top:8px">'+fechaHoy()+'</div></div></div>'+espInt+'<div class="sh-tot"><div class="sh-tr big"><span>Costo total (sin honorario)</span><span class="tot-v">'+fmt(costos)+'</span></div></div>'+shopHTML+'<div class="sh-note">Tu tope de compra. Las cantidades ya están sumadas por material y por espacio.</div></div>';
+      $$('rm-pv-int').innerHTML='<div class="sheet" id="rm-sheet-int"><div class="sh-brand">'+empBrand()+' <span style="color:var(--ink)">· interno</span></div><div class="sh-tag">Hoja de compra y presupuesto</div><div class="sh-meta"><div><div class="l">Proyecto</div><div class="v">'+esc(cur.proyecto||'—')+'</div></div><div style="text-align:right"><div class="sh-doc">'+esc(cur.numero||'—')+'</div><div class="v" style="margin-top:8px">'+fechaHoy()+'</div></div></div>'+espInt+'<div class="sh-tot"><div class="sh-tr big"><span>Costo total (sin honorario)</span><span class="tot-v">'+fmt(costos)+'</span></div></div>'+shopHTML+'<div class="sh-note">Tu tope de compra. Las cantidades ya están sumadas por material y por espacio.</div></div>';
     }
     $$('rm-pv-download').addEventListener('click',async()=>{
       const src= pvTab==='cli' ? $$('rm-sheet-cli') : $$('rm-sheet-int'); if(!src){ toast('Nada que exportar',true); return; }
@@ -742,7 +747,6 @@
   })();
 
   // ================= AJUSTES =================
-  let ajustes={};
   const afield=(lbl,id,val)=>'<div class="field"><label>'+lbl+'</label><input id="'+id+'" value="'+esc(val)+'"></div>';
   async function renderAjustes(){
     const v=$('v-ajustes');
