@@ -87,6 +87,18 @@
   .est{font-family:'IBM Plex Mono';font-size:8px;font-weight:600;text-transform:uppercase;padding:2px 6px;border-radius:99px;}
   .est.borrador{background:#eeeae0;color:#8f897a;} .est.enviada{background:#fbf0d6;color:#8a6a12;} .est.aceptada{background:#e6f0e6;color:var(--ok);} .est.vencida{background:#f3e0e0;color:#9a3b3b;}
   .rrow .m .s{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .est3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
+  .estc{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:10px 8px;}
+  .estc .dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:4px;vertical-align:middle;}
+  .estc.aceptada .dot{background:var(--ok);} .estc.enviada .dot{background:var(--gold);} .estc.vencida .dot{background:#9a3b3b;}
+  .estc .l{font-family:'IBM Plex Mono';font-size:7.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--gray-2);}
+  .estc .v{font-family:'Anton';font-size:15px;margin-top:2px;}
+  .estc .c{font-family:'IBM Plex Mono';font-size:8.5px;color:var(--gray-2);}
+  .filtros{display:flex;gap:5px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px;-webkit-overflow-scrolling:touch;}
+  .filtros button{white-space:nowrap;font-family:'IBM Plex Mono';font-size:10px;font-weight:600;border:1px solid var(--line-2);background:var(--paper);color:var(--gray);padding:6px 11px;border-radius:99px;cursor:pointer;}
+  .filtros button.active{background:var(--teal);color:#fff;border-color:var(--teal);}
+  .buscador{width:100%;border:1px solid var(--line-2);border-radius:9px;padding:10px 12px;font-size:14px;outline:none;background:var(--paper);margin-bottom:12px;}
+  .buscador:focus{border-color:var(--gold);}
   .rrow{cursor:pointer;}
   .row-del{background:none;border:none;color:var(--line-2);font-size:13px;font-weight:700;cursor:pointer;padding:4px 2px 4px 6px;flex-shrink:0;}
   .row-del:hover{color:#9a3b3b;}
@@ -319,7 +331,7 @@
   const URL_PLANOS='modulos/planos/index.html';
   const URL_REMOD='../remodelaciones/index.html';
   let sb=null, userEmail='';
-  let clientes=[], allQuotes=[], dashPeriod='mes', cliDetailId=undefined, ajustes={};
+  let clientes=[], allQuotes=[], dashPeriod='mes', cliDetailId=undefined, ajustes={}, cotFiltro='todas', cliBusqueda='';
   try{ sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,storage:window.localStorage}}); }catch(e){ console.error(e); }
 
   const $=id=>document.getElementById(id);
@@ -468,6 +480,12 @@
     }catch(e){ toast('Error de conexión',true); }
   }
 
+  function estadoCards(rows){
+    const pe=e=>{ const f=rows.filter(r=>(r.estado||'borrador')===e); return {n:f.length,m:sumDop(f)}; };
+    const ac=pe('aceptada'), en=pe('enviada'), ve=pe('vencida');
+    const card=(cls,lbl,o)=>'<div class="estc '+cls+'"><div class="l"><span class="dot"></span>'+lbl+'</div><div class="v">'+fmtShort(o.m)+'</div><div class="c">'+o.n+' cotización(es)</div></div>';
+    return '<div class="est3">'+card('aceptada','Aceptadas',ac)+card('enviada','Pendientes',en)+card('vencida','Vencidas',ve)+'</div>';
+  }
   function renderDash(){
     const rows=allQuotes.filter(r=>inPeriod(r.created_at,dashPeriod));
     const planos=rows.filter(r=>r.tipo==='planos'), remod=rows.filter(r=>r.tipo==='remod');
@@ -485,6 +503,7 @@
       '<div class="segs">'+P.map(x=>'<button data-p="'+x[0]+'" class="'+(dashPeriod===x[0]?'active':'')+'">'+x[1]+'</button>').join('')+'</div>'+
       '<div class="kpi-hero"><div class="l">Total cotizado</div><div class="v">'+fmt(totDop)+'</div>'+(totUsd>0?'<div class="usd">+ US$ '+Number(Math.round(totUsd)).toLocaleString('en-US')+'</div>':'')+'</div>'+
       '<div class="kpi2"><div class="kpi"><div class="l">Planos / Diseño</div><div class="v">'+fmtShort(sumDop(planos))+'</div><div class="c">'+planos.length+' cotización(es)</div></div><div class="kpi"><div class="l">Remodelación</div><div class="v">'+fmtShort(sumDop(remod))+'</div><div class="c">'+remod.length+' cotización(es)</div></div></div>'+
+      estadoCards(rows)+
       '<div class="chart"><div class="t">Cotizado por mes · últimos 6</div><div class="bars">'+barsHTML+'</div></div>'+
       '<div class="sec-h">Actividad reciente</div>'+recientes;
   }
@@ -494,11 +513,16 @@
   const cotsCliente=cid=>allQuotes.filter(q=>q.cliente_id===cid);
   function renderClientes(){
     cliDetailId=undefined;
-    const lista=clientes.length? clientes.map(c=>{
+    const q=cliBusqueda.trim().toLowerCase();
+    const filtrados=q? clientes.filter(c=>(c.nombre||'').toLowerCase().includes(q)) : clientes;
+    const lista=filtrados.length? filtrados.map(c=>{
       const n=cotsCliente(c.id).length;
       return '<div class="cli" data-cli="'+c.id+'"><div class="av">'+esc((c.nombre||'?')[0].toUpperCase())+'</div><div class="m"><div class="n">'+esc(c.nombre)+'</div><div class="s">'+n+' cotización(es)'+(c.rnc?' · RNC '+esc(c.rnc):'')+'</div></div></div>';
-    }).join('') : '<div class="empty">Aún no tienes clientes. Toca "+ Nuevo".</div>';
-    $('v-cli').innerHTML='<div class="h1-row"><div class="h1">Clientes</div><button class="newbtn" id="cli-new">+ Nuevo</button></div><div id="cli-body">'+lista+'</div>';
+    }).join('') : '<div class="empty">'+(q?'Ningún cliente coincide.':'Aún no tienes clientes. Toca "+ Nuevo".')+'</div>';
+    $('v-cli').innerHTML='<div class="h1-row"><div class="h1">Clientes</div><button class="newbtn" id="cli-new">+ Nuevo</button></div>'+
+      (clientes.length?'<input class="buscador" id="cli-buscar" placeholder="Buscar cliente..." value="'+esc(cliBusqueda)+'">':'')+
+      '<div id="cli-body">'+lista+'</div>';
+    const bi=$('cli-buscar'); if(bi){ bi.oninput=()=>{ cliBusqueda=bi.value; const pos=bi.selectionStart; renderClientes(); const nb=$('cli-buscar'); if(nb){ nb.focus(); try{nb.setSelectionRange(pos,pos);}catch(e){} } }; }
   }
   function renderClienteDetalle(c){
     cliDetailId=c.id;
@@ -544,16 +568,22 @@
 
   // ================= COTIZAR =================
   function renderCotizar(){
-    const recientes=allQuotes.slice(0,6).map(r=>quoteRow(r,true)).join('') || '<div class="empty">Aún no hay cotizaciones.</div>';
+    const F=[['todas','Todas'],['enviada','Pendientes'],['aceptada','Aceptadas'],['vencida','Vencidas'],['borrador','Borradores']];
+    let lista=allQuotes;
+    if(cotFiltro!=='todas') lista=allQuotes.filter(r=>(r.estado||'borrador')===cotFiltro);
+    const recientes=lista.slice(0,30).map(r=>quoteRow(r,true)).join('') || '<div class="empty">Sin cotizaciones en este filtro.</div>';
     $('v-cot').innerHTML='<div class="h1-row"><div class="h1">Cotizar</div></div>'+
       '<div class="cot-cards">'+
         '<div class="cot-card" data-go="planos"><div class="ic">'+svg('cot',24)+'</div><div class="t"><div class="n">Nueva de planos</div><div class="d">Honorarios de diseño y arquitectura</div></div></div>'+
         '<div class="cot-card rem" data-go="remod"><div class="ic">'+svg('cot',24)+'</div><div class="t"><div class="n">Nueva remodelación</div><div class="d">Levantamiento por espacios y partidas</div></div></div>'+
         '<div class="cot-card soon" data-go="construccion"><div class="ic">'+svg('cot',24)+'</div><div class="t"><div class="n">Nueva construcción <span class="soon-tag">Próximamente</span></div><div class="d">Presupuesto de obra por partidas</div></div></div>'+
       '</div>'+
-      '<div class="sec-h">Últimas cotizaciones</div>'+recientes;
+      '<div class="sec-h">Cotizaciones</div>'+
+      '<div class="filtros">'+F.map(x=>'<button data-f="'+x[0]+'" class="'+(cotFiltro===x[0]?'active':'')+'">'+x[1]+'</button>').join('')+'</div>'+
+      recientes;
   }
   $('v-cot').addEventListener('click',e=>{
+    const fb=e.target.closest('[data-f]'); if(fb){ cotFiltro=fb.dataset.f; renderCotizar(); return; }
     const del=e.target.closest('[data-del-id]'); if(del){ borrarCotiz(del.dataset.delTipo, del.dataset.delId); return; }
     const card=e.target.closest('[data-go]'); if(card){ const go=card.dataset.go; if(go==='remod') RemodMod.nuevo(); else if(go==='construccion') toast('Construcción — próximamente'); else abrirModulo('planos'); return; }
     const row=e.target.closest('[data-openrow]'); if(row){ const tipo=row.dataset.tipo, rid=row.dataset.rid; if(tipo==='remod'&&rid) RemodMod.abrir(rid); else abrirModulo('planos', rid||null); }
