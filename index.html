@@ -435,7 +435,7 @@
       (canDel?'<button class="row-del" data-del-tipo="'+r.tipo+'" data-del-id="'+(r.id||'')+'">✕</button>':'')+
     '</div>';
   }
-  function abrirCotiz(tipo,rid){ if(tipo==='remod'&&rid) RemodMod.abrir(rid); else toast('Planos — se conecta en el próximo paso'); }
+  function abrirCotiz(tipo,rid){ if(tipo==='remod'&&rid) RemodMod.abrir(rid); else abrirModulo('planos', rid||null); }
   function reRenderActual(){
     if(!$('v-cli').classList.contains('hide')){ if(cliDetailId){ const c=clientes.find(x=>x.id===cliDetailId); c?renderClienteDetalle(c):renderClientes(); } else renderClientes(); }
     else if(!$('v-cot').classList.contains('hide')) renderCotizar();
@@ -525,7 +525,7 @@
     if(e.target.id==='cli-editar'){ const c=clientes.find(x=>x.id===cliDetailId); if(c) formCliente(c); return; }
     if(e.target.id==='cli-eliminar'){ if(cliDetailId) borrarCliente(cliDetailId); return; }
     if(e.target.id==='c-save'){ guardarCliente(); return; }
-    const row=e.target.closest('[data-openrow]'); if(row){ if(row.dataset.tipo==='remod') abrirCotiz('remod',row.dataset.rid); else toast('Planos — se conecta en el próximo paso'); return; }
+    const row=e.target.closest('[data-openrow]'); if(row){ abrirCotiz(row.dataset.tipo, row.dataset.rid); return; }
     const c=e.target.closest('[data-cli]'); if(c){ const cl=clientes.find(x=>x.id===c.dataset.cli); if(cl) renderClienteDetalle(cl); }
   });
   async function guardarCliente(){
@@ -550,8 +550,8 @@
   }
   $('v-cot').addEventListener('click',e=>{
     const del=e.target.closest('[data-del-id]'); if(del){ borrarCotiz(del.dataset.delTipo, del.dataset.delId); return; }
-    const card=e.target.closest('[data-go]'); if(card){ const go=card.dataset.go; if(go==='remod') RemodMod.nuevo(); else if(go==='construccion') toast('Construcción — próximamente'); else toast('Planos — se conecta a la base nueva en el próximo paso'); return; }
-    const row=e.target.closest('[data-openrow]'); if(row){ const tipo=row.dataset.tipo, rid=row.dataset.rid; if(tipo==='remod'&&rid) RemodMod.abrir(rid); else toast('Planos — se conecta en el próximo paso'); }
+    const card=e.target.closest('[data-go]'); if(card){ const go=card.dataset.go; if(go==='remod') RemodMod.nuevo(); else if(go==='construccion') toast('Construcción — próximamente'); else abrirModulo('planos'); return; }
+    const row=e.target.closest('[data-openrow]'); if(row){ const tipo=row.dataset.tipo, rid=row.dataset.rid; if(tipo==='remod'&&rid) RemodMod.abrir(rid); else abrirModulo('planos', rid||null); }
   });
 
   // ================= EMBED (temporal, hasta fusión 2b/2c) =================
