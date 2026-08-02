@@ -1064,6 +1064,7 @@
   let currentQuoteId = null, currentClienteId = null, currentEstado = 'borrador', currentUserEmail = '', currentUserId = '';
   let clientesCache = [], dashData = [], dashFilter = 'todas', dashPeriod = 'mes', dashSort = {col:'created_at',dir:'desc'};
   let ncfSerie = 'B01', ncfSiguiente = 12;
+  let empresaData = {};
   const nextNCF = ()=> ncfSerie + String(ncfSiguiente).padStart(8,'0');
   const ncfSeq = s => { const d=String(s||'').replace(/\D/g,''); return parseInt(d.slice(-8)||'0',10); };
 
@@ -1226,13 +1227,23 @@
   async function cargarTarifasBase(){
     if(!sb) return;
     try{
-      const [tf, fc] = await Promise.all([
+      const [tf, fc, em] = await Promise.all([
         sb.from('tarifas').select('data').eq('tipo','planos').single(),
-        sb.from('fiscal').select('*').eq('id',1).single()
+        sb.from('fiscal').select('*').eq('id',1).single(),
+        sb.from('empresa').select('*').eq('id',1).single()
       ]);
       if(tf.data && tf.data.data) aplicarTarifas(tf.data.data);
       if(fc.data){ if(fc.data.ncf_serie) ncfSerie=fc.data.ncf_serie; if(fc.data.ncf_siguiente!=null) ncfSiguiente=fc.data.ncf_siguiente; }
+      if(em.data){ empresaData=em.data; aplicarEmpresa(); }
     }catch(e){ console.error(e); }
+  }
+  function aplicarEmpresa(){
+    const nom=(empresaData.nombre||'Laios Group').trim();
+    const p=nom.split(' ');
+    const brandHTML='<span class="g">'+p[0].replace(/[<>]/g,'')+'</span>'+(p.length>1?' '+p.slice(1).join(' ').replace(/[<>]/g,''):'');
+    document.querySelectorAll('.wm').forEach(el=>el.innerHTML=brandHTML);
+    document.querySelectorAll('.fw').forEach(el=>el.textContent=nom);
+    const rncEl=document.getElementById('doc-rnc-em'); if(rncEl && empresaData.rnc) rncEl.textContent=empresaData.rnc;
   }
   async function guardarTarifasBase(){
     if(!sb) return toast('Sin conexión', false);
@@ -1280,7 +1291,7 @@
   function DEFAULT_SNAP(){ return {
     cliente:'', cliente_id:null, proyecto:'', ubic:'',
     niveles:1, metrajeMode:'uniforme', areaUniforme:100, areas:[100],
-    piscina:true, itbis:false, showDetail:false, cur:'RD', fiscal:false, ncf:'', rnc_cliente:'', descuento:0, lang:'es',
+    piscina:true, itbis:!!empresaData.itbis_default, showDetail:false, cur:(empresaData.moneda_default==='USD'?'USD':'RD'), fiscal:false, ncf:'', rnc_cliente:'', descuento:0, lang:'es',
     serviceOrder:['levarq','arq','levest','est','elec','san','pap','tram'],
     services:{levarq:false,arq:true,levest:false,est:true,elec:true,san:true,pap:true,tram:false},
     process:[ {title:'Levantamiento',desc:'Medición y registro del sitio',on:true},
