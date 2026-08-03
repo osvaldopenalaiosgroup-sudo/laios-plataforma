@@ -1080,7 +1080,7 @@
   function toast(msg, ok=true){ const t=$('toast'); t.textContent=msg; t.className='toast '+(ok?'':'err')+' show'; setTimeout(()=>t.classList.remove('show'),2800); }
   const showEl=id=>$(id).style.display='', hideEl=id=>$(id).style.display='none';
 
-  function showLogin(){ showEl('login-view'); hideEl('app-view'); }
+  function showLogin(){ var h=document.getElementById('embed-login-hide'); if(h) h.remove(); showEl('login-view'); hideEl('app-view'); }
   function showApp(){ hideEl('login-view'); showEl('app-view'); }
   function setNav(w){ $('nav-dash').classList.toggle('active',w==='dash'); $('nav-cli').classList.toggle('active',w==='cli'); $('nav-cot').classList.toggle('active',w==='cot'); }
   function viewDashboard(){ showEl('dashboard-view'); hideEl('clientes-view'); hideEl('cotizador-view'); setNav('dash'); cargarDashboard(); }
@@ -1649,6 +1649,10 @@
   var st = document.createElement('style');
   st.textContent = '#topbar,#dashboard-view,#clientes-view{display:none !important;} #app-view{visibility:hidden;} body{background:#132f33 !important;}';
   document.head.appendChild(st);
+  // ocultar el login mientras llega la sesión de la plataforma (evita el "flash")
+  var lh = document.createElement('style'); lh.id='embed-login-hide';
+  lh.textContent = '#login-view{display:none !important;}';
+  document.head.appendChild(lh);
   var done = false;
   function reveal(){ var s2=document.createElement('style'); s2.textContent='#app-view{visibility:visible !important;} body{background:#cdc8bb !important;}'; document.head.appendChild(s2); }
   var iv = setInterval(function(){
