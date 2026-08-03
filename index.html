@@ -765,13 +765,16 @@
     }
     $$('rm-pv-download').addEventListener('click',async()=>{
       const src= pvTab==='cli' ? $$('rm-sheet-cli') : $$('rm-sheet-int'); if(!src){ toast('Nada que exportar',true); return; }
+      const btn=$$('rm-pv-download');
+      if(!cur.numero){ btn.textContent='Guardando…'; btn.disabled=true; await guardar(); if(!cur.numero){ toast('Guarda la cotización primero',true); btn.textContent='⤓ Descargar PDF'; btn.disabled=false; return; } renderPreview(); }
+      const source= pvTab==='cli' ? $$('rm-sheet-cli') : $$('rm-sheet-int');
       const nombre=(pvTab==='cli'?'Cotizacion_':'HojaInterna_')+(cur.numero||'remod')+'.pdf';
-      const btn=$$('rm-pv-download'); btn.textContent='Generando…'; btn.disabled=true;
-      const holder=document.createElement('div'); holder.style.cssText='position:fixed;left:-10000px;top:0;width:760px;background:#fff;';
-      const clone=src.cloneNode(true); clone.style.boxShadow='none'; clone.style.borderRadius='0'; clone.style.margin='0';
+      btn.textContent='Generando…'; btn.disabled=true;
+      const holder=document.createElement('div'); holder.style.cssText='position:fixed;left:0;top:0;width:760px;background:#fff;z-index:-1;';
+      const clone=source.cloneNode(true); clone.style.boxShadow='none'; clone.style.borderRadius='0'; clone.style.margin='0';
       holder.appendChild(clone); document.body.appendChild(holder);
       try{ if(document.fonts&&document.fonts.ready){ try{ await document.fonts.ready; }catch(e){} } await new Promise(r=>setTimeout(r,120));
-        await html2pdf().set({margin:8,filename:nombre,image:{type:'jpeg',quality:.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:760},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(clone).save();
+        await html2pdf().set({margin:8,filename:nombre,image:{type:'jpeg',quality:.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:760,scrollX:0,scrollY:0,x:0,y:0},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(clone).save();
       }catch(err){ toast('Error al generar PDF',true); }
       finally{ document.body.removeChild(holder); btn.textContent='⤓ Descargar PDF'; btn.disabled=false; }
     });
