@@ -260,6 +260,46 @@
   .shop{margin-top:8px;} .shop-h{font-family:'Anton';font-size:15px;border-bottom:1px solid var(--ink);padding-bottom:3px;margin-bottom:6px;}
   .shop-item{display:flex;justify-content:space-between;font-family:'IBM Plex Mono';font-size:11px;padding:3px 0;gap:8px;border-bottom:1px dotted var(--line);}
   .shop-item .d{flex:1;} .shop-item .b{color:var(--gray-2);font-size:9.5px;} .shop-item .s{white-space:nowrap;font-weight:600;}
+
+  /* ===================== DESKTOP / PC ===================== */
+  .dtop{display:none;}
+  @media(min-width:1024px){
+    body{background:var(--bg);}
+    .topbar{display:none !important;}
+    .drawer-ov{display:none !important;}
+    .drawer{transform:none !important;position:fixed;top:0;bottom:0;left:0;width:84px;max-width:84px;
+      background:var(--teal);box-shadow:none;padding:18px 0;align-items:center;}
+    .dr-brand{font-size:0 !important;padding:0 0 16px;}
+    .dr-brand::before{content:'L';font-family:'Anton';font-size:20px;color:var(--teal);background:var(--gold);
+      width:42px;height:42px;border-radius:12px;display:grid;place-items:center;}
+    .dr-menu{flex:1;padding:8px 0;display:flex;flex-direction:column;align-items:center;gap:6px;overflow:visible;}
+    .dr-lbl{display:none;}
+    .dr-item{justify-content:center;width:48px;height:48px;padding:0;border-radius:14px;color:#9db6b8;}
+    .dr-item span{display:none;}
+    .dr-item svg{stroke:#9db6b8;}
+    .dr-item:hover{background:var(--teal-soft);}
+    .dr-item.active{background:var(--gold);} .dr-item.active svg{stroke:var(--teal);}
+    .dr-foot{border-top:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:10px;}
+    .dr-user{padding:0;justify-content:center;}
+    .dr-user>div:last-child{display:none;}
+    .dr-user .av{width:46px;height:46px;border:2px solid var(--gold);cursor:pointer;background-size:cover;background-position:center;}
+    #dr-logout{width:44px;height:44px;justify-content:center;padding:0 !important;margin:0 !important;border-radius:14px;color:#9db6b8;}
+    #dr-logout span{display:none;}
+    #dr-logout svg{stroke:#9db6b8;}
+    .wrap{max-width:none;margin:0 0 0 84px;padding:26px 34px 34px;}
+    .dtop{display:flex;align-items:center;gap:22px;margin-bottom:22px;}
+    .dhello h1{font-family:'Anton';font-size:30px;line-height:1;letter-spacing:.01em;}
+    .dhello .g{color:var(--gold);}
+    .dhello p{font-family:'IBM Plex Mono';font-size:11px;color:var(--gray-2);margin-top:6px;}
+    .dsearch{flex:1;max-width:440px;margin:0 auto;position:relative;}
+    .dsearch input{width:100%;border:1px solid var(--line);background:#fff;border-radius:999px;
+      padding:12px 18px 12px 42px;font-family:'Archivo';font-size:14px;color:var(--ink);outline:none;}
+    .dsearch svg{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:17px;height:17px;fill:none;}
+    .dacct{display:flex;align-items:center;gap:10px;background:var(--teal);color:#fff;border-radius:999px;padding:7px 16px 7px 8px;}
+    .dacct .ph{width:32px;height:32px;border-radius:50%;background:var(--teal-soft);color:var(--gold);
+      display:grid;place-items:center;font-family:'Anton';font-size:14px;background-size:cover;background-position:center;}
+    .dacct .nm{font-family:'IBM Plex Mono';font-size:12px;font-weight:600;}
+  }
 </style>
 </head>
 <body>
@@ -301,11 +341,17 @@
   </div>
 
   <div class="wrap">
+    <div class="dtop">
+      <div class="dhello"><h1>Hola, <span class="g" id="dt-name">Osvaldo</span></h1><p id="dt-sub">Resumen de tu actividad</p></div>
+      <div class="dsearch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/></svg><input id="dt-search" placeholder="Buscar cliente…"></div>
+      <div class="dacct"><div class="ph" id="dt-ph">O</div><span class="nm" id="dt-accname">—</span></div>
+    </div>
     <div class="view" id="v-dash"></div>
     <div class="view hide" id="v-cli"></div>
     <div class="view hide" id="v-cot"></div>
     <div class="view hide" id="v-ajustes"><div class="h1-row"><div class="h1">Ajustes</div></div><div class="empty">Aquí irán tarifas base, marca, usuarios del equipo y preferencias. (Próxima etapa.)</div></div>
   </div>
+  <input type="file" id="foto-input" accept="image/*" style="display:none">
 </div>
 
 <div id="remod-screen" class="hide">
@@ -388,6 +434,9 @@
     $('login').classList.add('hide'); $('app').classList.remove('hide');
     const nm=userEmail.split('@')[0];
     $('dr-name').textContent=nm; $('dr-av').textContent=(nm[0]||'?').toUpperCase();
+    const dn=$('dt-name'); if(dn) dn.textContent=(nm.split(' ')[0]||'Hola');
+    const da=$('dt-accname'); if(da) da.textContent=nm;
+    aplicarFoto();
     cargarTodo(); navegar('dash');
   }
   $('dr-logout').addEventListener('click',async()=>{ await sb.auth.signOut(); location.reload(); });
@@ -406,6 +455,19 @@
   ov.addEventListener('click',closeDrawer);
   drawer.addEventListener('click',e=>{ const it=e.target.closest('.dr-item'); if(!it||!it.dataset.nav) return; navegar(it.dataset.nav); closeDrawer(); });
   const TITULOS={dash:'Dashboard',cli:'Clientes',cot:'Cotizar',ajustes:'Ajustes'};
+  function aplicarFoto(){
+    let d=''; try{ d=localStorage.getItem('laios_foto')||''; }catch(e){}
+    ['dr-av','dt-ph'].forEach(id=>{ const el=$(id); if(!el) return;
+      if(d){ el.style.backgroundImage='url('+d+')'; el.textContent=''; }
+      else{ el.style.backgroundImage=''; } });
+  }
+  (function(){ const av=$('dr-av'), inp=$('foto-input'); if(!av||!inp) return;
+    av.style.cursor='pointer';
+    av.addEventListener('click',()=>inp.click());
+    inp.addEventListener('change',()=>{ const f=inp.files[0]; if(!f) return;
+      const rd=new FileReader(); rd.onload=()=>{ try{ localStorage.setItem('laios_foto',rd.result); }catch(e){} aplicarFoto(); toast('Foto actualizada'); };
+      rd.readAsDataURL(f); });
+  })();
   function navegar(w){
     ['dash','cli','cot','ajustes'].forEach(v=>$('v-'+v).classList.toggle('hide',v!==w));
     drawer.querySelectorAll('.dr-item[data-nav]').forEach(x=>x.classList.toggle('active',x.dataset.nav===w));
