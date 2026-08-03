@@ -715,6 +715,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
 <script>
+  let empresaData = {};
   const state = {
     niveles:1, metrajeMode:'uniforme', areaUniforme:100, areas:[100],
     piscina:true, itbis:false, showDetail:false, cur:'RD', fiscal:false,
@@ -1063,7 +1064,7 @@
   /* ===================== CAPA SUPABASE / APP ===================== */
   const SB_URL = 'https://aymkcymtizudhxjqjask.supabase.co';
   const SB_KEY = 'sb_publishable_GCGb0U-zfqaQl-b6TODgTA_6ixj0HT7';
-  const SITE_URL = 'https://oxvald2.github.io/Cotizador-/';
+  const SITE_URL = 'https://osvaldopenalaiosgroup-sudo.github.io/laios-plataforma/modulos/planos/';
   let sb = null;
   try { sb = window.supabase.createClient(SB_URL, SB_KEY, {
     auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, storage: window.localStorage }
@@ -1073,7 +1074,6 @@
   let currentQuoteId = null, currentClienteId = null, currentEstado = 'borrador', currentUserEmail = '', currentUserId = '';
   let clientesCache = [], dashData = [], dashFilter = 'todas', dashPeriod = 'mes', dashSort = {col:'created_at',dir:'desc'};
   let ncfSerie = 'B01', ncfSiguiente = 12;
-  let empresaData = {};
   const nextNCF = ()=> ncfSerie + String(ncfSiguiente).padStart(8,'0');
   const ncfSeq = s => { const d=String(s||'').replace(/\D/g,''); return parseInt(d.slice(-8)||'0',10); };
 
