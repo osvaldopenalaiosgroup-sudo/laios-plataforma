@@ -1221,6 +1221,8 @@
     }
   }
   function onLoggedIn(session){
+    if(window._laiosBooted) { showApp(); return; }
+    window._laiosBooted=true;
     $('login-msg').textContent=''; $('login-pass').value='';
     try{ localStorage.setItem('laios_email', session.user.email||''); }catch(e){}
     currentUserEmail = session.user.email || '';
@@ -1615,7 +1617,27 @@
   $('btn-vista').addEventListener('click', ()=>toggleFullPreview(true));
   $('fp-close').addEventListener('click', ()=>toggleFullPreview(false));
 
-  checkSession();
+  // Recibir la sesión del contenedor (plataforma) cuando planos corre dentro del iframe
+  let _embedSessTried=false;
+  window.addEventListener('message', async (ev)=>{
+    if(ev.origin!==location.origin) return;
+    const d=ev.data||{};
+    if(d.type==='laios-session' && sb && d.access_token){
+      _embedSessTried=true;
+      try{
+        const { data } = await sb.auth.setSession({ access_token:d.access_token, refresh_token:d.refresh_token });
+        if(data && data.session) onLoggedIn(data.session);
+      }catch(e){ console.error('setSession embed:', e); }
+    }
+  });
+
+  const _isEmbed = new URLSearchParams(location.search).get('embed')==='1';
+  if(_isEmbed){
+    // esperar la sesión que envía la plataforma; si no llega, intentar la local
+    setTimeout(()=>{ if(!_embedSessTried) checkSession(); }, 1500);
+  } else {
+    checkSession();
+  }
 </script>
 
 <!-- === Modo plataforma (embed): no toca la lógica fiscal, solo esconde el menú y entra directo === -->
