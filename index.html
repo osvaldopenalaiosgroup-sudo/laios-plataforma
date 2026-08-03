@@ -590,11 +590,14 @@
   });
 
   // ================= EMBED (temporal, hasta fusión 2b/2c) =================
-  function abrirModulo(go,id){
+  async function abrirModulo(go,id){
     $('embed-title').textContent = go==='planos'?'Planos / Diseño':'Remodelación';
     let u = go==='planos'?URL_PLANOS:URL_REMOD;
     u += '?embed=1'+(id?('&open='+encodeURIComponent(id)):'&nuevo=1');
-    $('embed-frame').src = u;
+    const frame=$('embed-frame');
+    let sess=null; try{ const {data}=await sb.auth.getSession(); sess=data&&data.session; }catch(e){}
+    frame.onload=()=>{ if(sess){ try{ frame.contentWindow.postMessage({type:'laios-session',access_token:sess.access_token,refresh_token:sess.refresh_token}, location.origin); }catch(e){} } };
+    frame.src = u;
     $('embed').classList.remove('hide');
   }
   $('embed-back').addEventListener('click',()=>{ $('embed').classList.add('hide'); $('embed-frame').src='about:blank'; cargarTodo(); });
