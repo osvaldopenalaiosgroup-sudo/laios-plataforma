@@ -261,6 +261,8 @@
   .shop-item{display:flex;justify-content:space-between;font-family:'IBM Plex Mono';font-size:11px;padding:3px 0;gap:8px;border-bottom:1px dotted var(--line);}
   .shop-item .d{flex:1;} .shop-item .b{color:var(--gray-2);font-size:9.5px;} .shop-item .s{white-space:nowrap;font-weight:600;}
 
+  .seg4{flex-wrap:wrap;} .seg4 button{font-size:11.5px;padding:9px 4px;}
+  @media(min-width:1024px){ #cli-buscar{display:none;} }
   /* ===================== DESKTOP / PC ===================== */
   .dtop{display:none;}
   @media(min-width:1024px){
@@ -467,6 +469,9 @@
     inp.addEventListener('change',()=>{ const f=inp.files[0]; if(!f) return;
       const rd=new FileReader(); rd.onload=()=>{ try{ localStorage.setItem('laios_foto',rd.result); }catch(e){} aplicarFoto(); toast('Foto actualizada'); };
       rd.readAsDataURL(f); });
+  })();
+  (function(){ const s=document.getElementById('dt-search'); if(!s) return;
+    s.addEventListener('input',()=>{ cliBusqueda=s.value; if(document.getElementById('v-cli').classList.contains('hide')) navegar('cli'); else renderClientes(); s.focus(); });
   })();
   function navegar(w){
     ['dash','cli','cot','ajustes'].forEach(v=>$('v-'+v).classList.toggle('hide',v!==w));
@@ -724,7 +729,9 @@
       const h=cur.hon;
       const honHTML='<div class="opt-card"><div class="opt-h">Honorario profesional</div><div class="seg"><button class="'+(h.tipo==='pct'?'active':'')+'" data-hon="pct">Porcentaje</button><button class="'+(h.tipo==='pa'?'active':'')+'" data-hon="pa">Monto (PA)</button></div><div class="opt-row"><div class="opt-in">'+(h.tipo==='pct'?'<input inputmode="decimal" value="'+h.pct+'" data-k="honpct"><span class="u">% sobre costos</span>':'<span class="u">RD$</span><input inputmode="decimal" value="'+(h.monto||'')+'" data-k="honmonto" style="width:120px">')+'</div><div class="opt-amt">'+fmt(honMonto())+'</div></div></div>';
       const itbisHTML='<div class="opt-card"><div class="opt-h">Impuestos</div><div class="opt-row"><label class="switch"><input type="checkbox" id="chk-itbis" '+(cur.itbis?'checked':'')+'> Aplicar ITBIS (18%)</label><div class="opt-amt">'+fmt(itbisMonto())+'</div></div></div>';
-      $$('rm-editor').innerHTML=meta+espHTML+'<button class="add-esp" id="rm-add-esp"><span class="g">+</span> Agregar espacio</button>'+honHTML+itbisHTML;
+      const ESTS=[['borrador','Borrador'],['enviada','Enviada'],['aceptada','Aceptada'],['vencida','Vencida']];
+      const estadoHTML='<div class="opt-card"><div class="opt-h">Estado de la cotización</div><div class="seg seg4">'+ESTS.map(x=>'<button class="'+(cur.estado===x[0]?'active':'')+'" data-est="'+x[0]+'">'+x[1]+'</button>').join('')+'</div></div>';
+      $$('rm-editor').innerHTML=meta+estadoHTML+espHTML+'<button class="add-esp" id="rm-add-esp"><span class="g">+</span> Agregar espacio</button>'+honHTML+itbisHTML;
       $$('rm-title').textContent = cur.numero ? ('Remodelación · '+cur.numero) : 'Nueva remodelación';
       barra();
     }
@@ -778,6 +785,7 @@
       if(b.id==='rm-add-esp'){ cur.espacios.push(nuevoEsp()); renderEditor(); return; }
       const mode=b.dataset.mode, add=b.dataset.add, del=b.dataset.del, hon=b.dataset.hon;
       if(hon){ cur.hon.tipo=hon; renderEditor(); return; }
+      if(b.dataset.est){ cur.estado=b.dataset.est; renderEditor(); return; }
       if(mode){ const a=mode.split(':'); const it=cur.espacios[+a[1]].partidas[+a[2]].acapites[+a[3]].items[+a[4]]; if(a[0]==='pa'){ if(it.monto===''||it.monto==null) it.monto=itSub(it)||''; it.pa=true; } else it.pa=false; renderEditor(); return; }
       if(add){ const a=add.split(':'), tt=a[0], e0=+a[1];
         if(tt==='part') cur.espacios[e0].partidas.push(nuevaPart());
@@ -816,7 +824,7 @@
     function renderPreview(){
       const espCli=cur.espacios.map(e=>{ const descs=e.partidas.map(p=>p.desc&&p.desc.trim()?p.desc.trim():'').filter(Boolean).join(' '); return '<div class="cl-esp"><div class="cl-top"><div class="cl-name">'+esc(e.nombre||'Espacio')+'</div><div class="cl-amt">'+fmt(espTot(e))+'</div></div>'+(descs?'<div class="cl-desc">'+esc(descs)+'</div>':'')+'</div>'; }).join('');
       const costos=costosTot(),hon=honMonto(),itb=itbisMonto(),total=totalFinal(),subCliente=costos+hon;
-      $$('rm-pv-cli').innerHTML='<div class="sheet" id="rm-sheet-cli"><div class="sh-brand">'+empBrand()+'</div><div class="sh-tag">'+(empContacto()||'Arquitectura · Diseño · Construcción')+'</div><div class="sh-meta"><div><div class="l">Cliente</div><div class="v">'+esc(cur.cliente_nombre||'—')+'</div><div class="l" style="margin-top:8px">Proyecto</div><div class="v">'+esc(cur.proyecto||'—')+'</div></div><div style="text-align:right"><div class="sh-doc">Cotización</div><div class="v" style="margin-top:8px">'+esc(cur.numero||'—')+'</div><div class="v">'+fechaHoy()+'</div></div></div>'+espCli+'<div class="sh-tot"><div class="sh-tr"><span>Subtotal</span><span>'+fmt(subCliente)+'</span></div>'+(cur.itbis?'<div class="sh-tr"><span>ITBIS (18%)</span><span>'+fmt(itb)+'</span></div>':'')+'<div class="sh-tr big"><span>Total</span><span class="tot-v">'+fmt(total)+'</span></div></div><div class="sh-note">'+empNota()+'</div></div>';
+      $$('rm-pv-cli').innerHTML='<div class="sheet" id="rm-sheet-cli"><div class="sh-brand">'+empBrand()+'</div><div class="sh-tag">'+(empContacto()||'Arquitectura · Diseño · Construcción')+'</div><div class="sh-meta"><div><div class="l">Cliente</div><div class="v">'+esc(cur.cliente_nombre||'—')+'</div><div class="l" style="margin-top:8px">Proyecto</div><div class="v">'+esc(cur.proyecto||'—')+'</div></div><div style="text-align:right"><div class="sh-doc">Cotización</div><div class="v" style="margin-top:8px">'+esc(cur.numero||'—')+'</div><div class="v">'+fechaHoy()+'</div></div></div>'+espCli+'<div class="sh-tot">'+(cur.itbis?'<div class="sh-tr"><span>Subtotal</span><span>'+fmt(subCliente)+'</span></div><div class="sh-tr"><span>ITBIS (18%)</span><span>'+fmt(itb)+'</span></div><div class="sh-tr big"><span>Total</span><span class="tot-v">'+fmt(total)+'</span></div>':'<div class="sh-tr big"><span>Total</span><span class="tot-v">'+fmt(subCliente)+'</span></div>')+'</div><div class="sh-note">'+empNota()+'</div></div>';
       const espInt=cur.espacios.map(e=>{ const parts=e.partidas.map(p=>{ const acaps=p.acapites.map(a=>{ const items=a.items.map(it=> it.pa?'<div class="in-item"><span class="d">'+esc(it.concepto||'—')+' <span class="pa-tag">PA</span></span><span class="q">precio alzado</span><span class="s">'+fmtN(itSub(it))+'</span></div>':'<div class="in-item"><span class="d">'+esc(it.concepto||'—')+'</span><span class="q">'+(Number(it.cant)||0)+' '+it.uni+' × '+fmtN(it.costo)+'</span><span class="s">'+fmtN(itSub(it))+'</span></div>').join(''); return '<div class="in-acap">'+esc(a.nombre||'—')+'</div>'+items; }).join(''); return '<div class="in-part">'+esc(p.nombre||'—')+'</div>'+acaps; }).join(''); return '<div class="in-esp"><div class="in-esp-h"><span>'+esc(e.nombre||'Espacio')+'</span><span class="t">'+fmt(espTot(e))+'</span></div>'+parts+'</div>'; }).join('');
       const map={}, paList=[];
       cur.espacios.forEach(e=>{ const en=e.nombre||'Espacio'; e.partidas.forEach(p=>p.acapites.forEach(a=>a.items.forEach(it=>{ if(it.pa){ if(itSub(it)>0) paList.push({c:it.concepto||'—',e:en,m:itSub(it)}); return; } const cant=Number(it.cant)||0; if(!cant) return; const key=(it.concepto||'—').trim().toLowerCase()+'|'+it.uni; if(!map[key]) map[key]={c:it.concepto||'—',u:it.uni,total:0,porEsp:{}}; map[key].total+=cant; map[key].porEsp[en]=(map[key].porEsp[en]||0)+cant; }))); });
