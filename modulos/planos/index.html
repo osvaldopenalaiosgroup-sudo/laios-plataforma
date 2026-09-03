@@ -832,7 +832,7 @@
     const r=rates();
     $('d-cliente').textContent=$('i-cliente').value||'—';
     $('d-proyecto').textContent=$('i-proyecto').value||'—';
-    let totalM2=0; for(let i=0;i<state.niveles;i++) totalM2+=getArea(i);
+    let totalM2=0; if(state.metrajeMode==='uniforme'){ totalM2=Number(state.areaUniforme)||0; } else { for(let i=0;i<state.niveles;i++) totalM2+=getArea(i); }
     $('d-proy-detail').textContent=`${state.niveles} ${T().niveles} · ${totalM2.toLocaleString('en-US')} ${T().m2tot} · ${$('i-ubic').value||''}`;
 
     // modo fiscal (Factura con Crédito Fiscal)
@@ -1249,7 +1249,7 @@
 
   /* ---- TARIFAS BASE (nube) ---- */
   const RATE_MAP={base:'r-base',f2:'r-f2',f3:'r-f3',est:'r-est',estfix:'r-estfix',pool:'r-pool',elec:'r-elec',san:'r-san',pap:'r-pap',tram:'r-tram',levarq:'r-levarq',levest:'r-levest',minES:'r-min-es',minEst:'r-min-est',rate:'r-rate'};
-  function aplicarTarifas(t){ if(!t) return; Object.keys(RATE_MAP).forEach(k=>{ if(t[k]!==undefined && $(RATE_MAP[k])) $(RATE_MAP[k]).value=t[k]; }); render(); }
+  function aplicarTarifas(t){ if(!t) return; Object.keys(RATE_MAP).forEach(k=>{ if(t[k]!==undefined && $(RATE_MAP[k])){ let v=t[k]; if(k==='f2'||k==='f3'){ v=v*100; if(v<1) return; } $(RATE_MAP[k]).value=v; } }); render(); }
   async function cargarTarifasBase(){
     if(!sb) return;
     try{
