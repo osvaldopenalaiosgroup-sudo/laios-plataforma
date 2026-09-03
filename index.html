@@ -83,7 +83,7 @@
   .sec-h{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gray-2);margin:6px 2px 10px;}
   .rrow{display:flex;align-items:center;gap:10px;background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:8px;}
   .badge{font-family:'IBM Plex Mono';font-size:8px;font-weight:600;text-transform:uppercase;padding:3px 7px;border-radius:99px;flex-shrink:0;}
-  .badge.planos{background:#e7eef0;color:var(--teal);} .badge.remod{background:#fbf0d6;color:#8a6a12;}
+  .badge.planos{background:#e7eef0;color:var(--teal);} .badge.remod{background:#fbf0d6;color:#8a6a12;} .badge.general{background:#e3efe6;color:#2f6a45;}
   .est{font-family:'IBM Plex Mono';font-size:8px;font-weight:600;text-transform:uppercase;padding:2px 6px;border-radius:99px;}
   .est.borrador{background:#eeeae0;color:#8f897a;} .est.enviada{background:#fbf0d6;color:#8a6a12;} .est.aceptada{background:#e6f0e6;color:var(--ok);} .est.vencida{background:#f3e0e0;color:#9a3b3b;}
   .rrow .m .s{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
@@ -367,6 +367,17 @@
   </div>
 </div>
 
+<div id="gen-screen" class="hide">
+  <div class="rm-bar"><button id="gen-back">← Inicio</button><span class="t" id="gen-title">General</span></div>
+  <div id="gen-editor"></div>
+  <div id="gen-savebar" class="hide"></div>
+  <div id="gen-preview" class="hide">
+    <div class="pv-bar"><div class="pv-tabs"><button class="active">PDF Cotización</button></div><button class="pv-close" id="gen-pv-close">✕</button></div>
+    <div class="pv-scroll"><div id="gen-sheet"></div></div>
+    <div class="pv-dl"><button id="gen-pv-download">⤓ Descargar PDF</button></div>
+  </div>
+</div>
+
 <div id="embed" class="hide">
   <div class="embed-bar"><button id="embed-back">← Inicio</button><span class="t" id="embed-title"></span></div>
   <iframe id="embed-frame" title="módulo"></iframe>
@@ -513,13 +524,13 @@
   const estBadge=est=>'<span class="est '+(est||'borrador')+'">'+(est||'borrador')+'</span>';
   function fmtFecha(d){ if(!d) return ''; const dt=new Date(d), now=new Date(); const dias=Math.floor((now-dt)/86400000); if(dias<=0) return 'hoy'; if(dias===1) return 'ayer'; if(dias<30) return 'hace '+dias+' días'; return dt.toLocaleDateString('es-DO',{day:'2-digit',month:'short'}); }
   function quoteRow(r, canDel){
-    return '<div class="rrow" data-openrow data-tipo="'+r.tipo+'" data-rid="'+(r.id||'')+'"><span class="badge '+r.tipo+'">'+(r.tipo==='planos'?'Planos':'Remod')+'</span>'+
+    return '<div class="rrow" data-openrow data-tipo="'+r.tipo+'" data-rid="'+(r.id||'')+'"><span class="badge '+r.tipo+'">'+(r.tipo==='planos'?'Planos':r.tipo==='general'?'General':'Remod')+'</span>'+
       '<div class="m"><div class="n">'+esc(r.cliente_nombre||r.proyecto||'—')+'</div><div class="s">'+esc(r.numero||'—')+' '+estBadge(r.estado)+' · '+fmtFecha(r.created_at)+'</div></div>'+
       '<div class="amt">'+(esUSD(r)?'US$ ':'RD$ ')+Number(Math.round(r.total||0)).toLocaleString('en-US')+'</div>'+
       (canDel?'<button class="row-del" data-del-tipo="'+r.tipo+'" data-del-id="'+(r.id||'')+'">✕</button>':'')+
     '</div>';
   }
-  function abrirCotiz(tipo,rid){ if(tipo==='remod'&&rid) RemodMod.abrir(rid); else abrirModulo('planos', rid||null); }
+  function abrirCotiz(tipo,rid){ if(tipo==='remod'&&rid) RemodMod.abrir(rid); else if(tipo==='general'&&rid) GenMod.abrir(rid); else abrirModulo('planos', rid||null); }
   function reRenderActual(){
     if(!$('v-cli').classList.contains('hide')){ if(cliDetailId){ const c=clientes.find(x=>x.id===cliDetailId); c?renderClienteDetalle(c):renderClientes(); } else renderClientes(); }
     else if(!$('v-cot').classList.contains('hide')) renderCotizar();
@@ -643,7 +654,7 @@
       '<div class="cot-cards">'+
         '<div class="cot-card" data-go="planos"><div class="ic">'+svg('cot',24)+'</div><div class="t"><div class="n">Nueva de planos</div><div class="d">Honorarios de diseño y arquitectura</div></div></div>'+
         '<div class="cot-card rem" data-go="remod"><div class="ic">'+svg('cot',24)+'</div><div class="t"><div class="n">Nueva remodelación</div><div class="d">Levantamiento por espacios y partidas</div></div></div>'+
-        '<div class="cot-card soon" data-go="construccion"><div class="ic">'+svg('cot',24)+'</div><div class="t"><div class="n">Nueva construcción <span class="soon-tag">Próximamente</span></div><div class="d">Presupuesto de obra por partidas</div></div></div>'+
+        '<div class="cot-card gen" data-go="general"><div class="ic">'+svg('cot',24)+'</div><div class="t"><div class="n">Nueva general / servicios</div><div class="d">Título, descripción y precio por bloque</div></div></div>'+
       '</div>'+
       '<div class="sec-h">Cotizaciones</div>'+
       '<div class="filtros">'+F.map(x=>'<button data-f="'+x[0]+'" class="'+(cotFiltro===x[0]?'active':'')+'">'+x[1]+'</button>').join('')+'</div>'+
@@ -652,7 +663,7 @@
   $('v-cot').addEventListener('click',e=>{
     const fb=e.target.closest('[data-f]'); if(fb){ cotFiltro=fb.dataset.f; renderCotizar(); return; }
     const del=e.target.closest('[data-del-id]'); if(del){ borrarCotiz(del.dataset.delTipo, del.dataset.delId); return; }
-    const card=e.target.closest('[data-go]'); if(card){ const go=card.dataset.go; if(go==='remod') RemodMod.nuevo(); else if(go==='construccion') toast('Construcción — próximamente'); else abrirModulo('planos'); return; }
+    const card=e.target.closest('[data-go]'); if(card){ const go=card.dataset.go; if(go==='remod') RemodMod.nuevo(); else if(go==='general') GenMod.nuevo(); else abrirModulo('planos'); return; }
     const row=e.target.closest('[data-openrow]'); if(row){ const tipo=row.dataset.tipo, rid=row.dataset.rid; if(tipo==='remod'&&rid) RemodMod.abrir(rid); else abrirModulo('planos', rid||null); }
   });
 
@@ -670,6 +681,115 @@
   $('embed-back').addEventListener('click',()=>{ $('embed').classList.add('hide'); $('embed-frame').src='about:blank'; cargarTodo(); });
 
   // ================= MÓDULO REMODELACIÓN (fusionado, sin iframe) =================
+  const GenMod=(function(){
+    const $$=id=>document.getElementById(id);
+    let cur=null, curId=null;
+    const blocAmt=b=> b.modo==='pa'?(Number(b.pa)||0):(Number(b.cant)||0)*(Number(b.precio)||0);
+    const subtotal=()=>cur.bloques.reduce((s,b)=>s+blocAmt(b),0);
+    const itbisMonto=()=>cur.itbis?subtotal()*0.18:0;
+    const totalFinal=()=>subtotal()+itbisMonto();
+    const nuevoBloque=()=>({titulo:'',desc:'',modo:'pa',cant:'',precio:'',pa:''});
+    const nuevaCot=()=>({cliente_id:null,cliente_nombre:'',proyecto:'',numero:'',estado:'borrador',moneda:(ajustes.moneda_default||'DOP'),itbis:!!ajustes.itbis_default,bloques:[nuevoBloque()]});
+
+    function volver(){ $$('gen-screen').classList.add('hide'); $$('gen-savebar').classList.add('hide'); $$('gen-preview').classList.add('hide'); cargarTodo(); }
+    function nuevo(){ cur=nuevaCot(); curId=null; $$('gen-screen').classList.remove('hide'); render(); $$('gen-editor').scrollTop=0; }
+    async function abrir(id){
+      try{
+        const {data,error}=await sb.from('cotizaciones').select('*').eq('id',id).single();
+        if(error||!data){ toast('No se pudo abrir',true); return; }
+        cur=data.data||nuevaCot();
+        cur.cliente_id=data.cliente_id; cur.cliente_nombre=data.cliente_nombre; cur.proyecto=data.proyecto;
+        cur.numero=data.numero; cur.estado=data.estado; cur.moneda=data.moneda||'DOP'; cur.itbis=!!data.itbis;
+        if(!cur.bloques||!cur.bloques.length) cur.bloques=[nuevoBloque()];
+        curId=id; $$('gen-screen').classList.remove('hide'); render(); $$('gen-editor').scrollTop=0;
+      }catch(e){ toast('Error de conexión',true); }
+    }
+
+    function render(){
+      const cliOpts='<option value="">— Selecciona cliente —</option>'+clientes.map(c=>'<option value="'+c.id+'" '+(c.id===cur.cliente_id?'selected':'')+'>'+esc(c.nombre)+'</option>').join('');
+      const meta='<div class="ed-meta"><label>Cliente</label><select id="g-cli">'+cliOpts+'</select><label>Proyecto / lugar</label><input id="g-proy" value="'+esc(cur.proyecto)+'" placeholder="Ej. Edificios 07, 08 y 09"></div>';
+      const ESTS=[['borrador','Borrador'],['enviada','Enviada'],['aceptada','Aceptada'],['vencida','Vencida']];
+      const estadoHTML='<div class="opt-card"><div class="opt-h">Estado de la cotización</div><div class="seg seg4">'+ESTS.map(x=>'<button class="'+(cur.estado===x[0]?'active':'')+'" data-est="'+x[0]+'">'+x[1]+'</button>').join('')+'</div></div>';
+      const bloq=cur.bloques.map((b,i)=>{
+        const modes='<div class="it-mode"><button class="'+(b.modo!=='pa'?'active':'')+'" data-gmode="mult:'+i+'">× precio</button><button class="'+(b.modo==='pa'?'active':'')+'" data-gmode="pa:'+i+'">PA</button></div>';
+        const det= b.modo==='pa'
+          ? '<div class="nums"><div class="nb pa"><small>Monto total (PA)</small><input inputmode="decimal" value="'+(b.pa==null?'':b.pa)+'" data-gk="pa" data-gi="'+i+'"></div><div class="subb"><small>Subt.</small><b>'+fmt(blocAmt(b))+'</b></div></div>'
+          : '<div class="nums"><div class="nb qty"><small>Cant.</small><input inputmode="decimal" value="'+(b.cant==null?'':b.cant)+'" data-gk="cant" data-gi="'+i+'"></div><div class="times">×</div><div class="nb cost"><small>Precio</small><input inputmode="decimal" value="'+(b.precio==null?'':b.precio)+'" data-gk="precio" data-gi="'+i+'"></div><div class="subb"><small>Subt.</small><b>'+fmt(blocAmt(b))+'</b></div></div>';
+        return '<div class="espacio"><div class="esp-head"><div class="esp-icon">▤</div><input class="esp-name" placeholder="Título (ej. Levantamiento arquitectónico)" value="'+esc(b.titulo)+'" data-gk="titulo" data-gi="'+i+'"><button class="x-btn" data-gdel="'+i+'">✕</button></div><div class="pd-lbl">Descripción (va en el PDF del cliente)</div><textarea class="part-desc" data-gk="desc" data-gi="'+i+'" placeholder="Detalle de lo que se hará...">'+esc(b.desc)+'</textarea><div class="it-top" style="margin-top:10px">'+modes+'</div>'+det+'</div>';
+      }).join('');
+      const itbisHTML='<div class="opt-card"><div class="opt-h">Impuestos</div><div class="opt-row"><label class="switch"><input type="checkbox" id="g-itbis" '+(cur.itbis?'checked':'')+'> Aplicar ITBIS (18%)</label><div class="opt-amt">'+fmt(itbisMonto())+'</div></div></div>';
+      $$('gen-editor').innerHTML=meta+estadoHTML+bloq+'<button class="add-esp" id="g-add"><span class="g">+</span> Agregar bloque</button>'+itbisHTML;
+      $$('gen-title').textContent = cur.numero ? ('General · '+cur.numero) : 'Nueva general / servicios';
+      barra();
+    }
+    function barra(){ const b=$$('gen-savebar'); b.innerHTML='<div class="sb-inner"><div class="sb-total"><div class="l">Total al cliente</div><div class="v">'+fmt(totalFinal())+'</div></div><div class="sb-acts"><button class="b-prev" id="g-prev">Ver PDF</button><button class="b-save" id="g-save">Guardar</button></div></div>'; b.classList.remove('hide'); }
+
+    function preview(){
+      const st=subtotal(), itb=itbisMonto(), tot=totalFinal();
+      const blocks=cur.bloques.map(b=>'<div class="cl-esp"><div class="cl-top"><div class="cl-name">'+esc(b.titulo||'—')+'</div><div class="cl-amt">'+fmt(blocAmt(b))+'</div></div>'+(b.desc&&b.desc.trim()?'<div class="cl-desc">'+esc(b.desc.trim())+'</div>':'')+'</div>').join('');
+      const totHTML=cur.itbis
+        ? '<div class="sh-tr"><span>Subtotal</span><span>'+fmt(st)+'</span></div><div class="sh-tr"><span>ITBIS (18%)</span><span>'+fmt(itb)+'</span></div><div class="sh-tr big"><span>Total</span><span class="tot-v">'+fmt(tot)+'</span></div>'
+        : '<div class="sh-tr big"><span>Total</span><span class="tot-v">'+fmt(st)+'</span></div>';
+      $$('gen-sheet').innerHTML='<div class="sheet" id="gen-sheet-doc"><div class="sh-brand">'+empBrand()+'</div><div class="sh-tag">'+(empContacto()||'Arquitectura · Diseño · Construcción')+'</div><div class="sh-meta"><div><div class="l">Cliente</div><div class="v">'+esc(cur.cliente_nombre||'—')+'</div><div class="l" style="margin-top:8px">Proyecto</div><div class="v">'+esc(cur.proyecto||'—')+'</div></div><div style="text-align:right"><div class="sh-doc">Cotización</div><div class="v" style="margin-top:8px">'+esc(cur.numero||'—')+'</div><div class="v">'+fechaHoy()+'</div></div></div>'+blocks+'<div class="sh-tot">'+totHTML+'</div><div class="sh-note">'+empNota()+'</div></div>';
+      $$('gen-preview').classList.remove('hide');
+    }
+
+    async function guardar(){
+      const btn=$$('g-save'); if(btn){btn.textContent='Guardando…';btn.disabled=true;}
+      try{
+        const row={ tipo:'general', cliente_id:cur.cliente_id, cliente_nombre:cur.cliente_nombre, proyecto:cur.proyecto, estado:cur.estado, moneda:cur.moneda, itbis:cur.itbis, total:totalFinal(), data:cur };
+        let res;
+        if(curId) res=await sb.from('cotizaciones').update(row).eq('id',curId).select('id,numero').single();
+        else res=await sb.from('cotizaciones').insert(row).select('id,numero').single();
+        if(res.error){ toast('Error al guardar',true); } else { curId=res.data.id; cur.numero=res.data.numero||cur.numero; $$('gen-title').textContent='General · '+(cur.numero||''); toast('Guardada'+(cur.numero?' ('+cur.numero+')':'')); }
+      }catch(e){ toast('Error de conexión',true); }
+      finally{ const b2=$$('g-save'); if(b2){b2.textContent='Guardar';b2.disabled=false;} }
+    }
+
+    $$('gen-back').addEventListener('click',volver);
+    $$('gen-pv-close').addEventListener('click',()=>$$('gen-preview').classList.add('hide'));
+    $$('gen-editor').addEventListener('input',e=>{
+      const t=e.target;
+      if(t.id==='g-proy'){ cur.proyecto=t.value; return; }
+      const k=t.dataset.gk; if(k===undefined) return;
+      const i=+t.dataset.gi, b=cur.bloques[i]; if(!b) return;
+      b[k]=t.value;
+      if(k==='cant'||k==='precio'||k==='pa'){ const box=t.closest('.espacio'); const sb2=box&&box.querySelector('.subb b'); if(sb2) sb2.textContent=fmt(blocAmt(b)); const ia=$$('gen-editor').querySelector('.opt-amt'); if(ia) ia.textContent=fmt(itbisMonto()); barra(); }
+    });
+    $$('gen-editor').addEventListener('change',e=>{
+      if(e.target.id==='g-cli'){ cur.cliente_id=e.target.value||null; const c=clientes.find(x=>x.id===cur.cliente_id); cur.cliente_nombre=c?c.nombre:''; }
+      else if(e.target.id==='g-itbis'){ cur.itbis=e.target.checked; render(); }
+    });
+    $$('gen-editor').addEventListener('click',e=>{
+      const b=e.target.closest('button'); if(!b) return;
+      if(b.dataset.gmode){ const pr=b.dataset.gmode.split(':'); cur.bloques[+pr[1]].modo=(pr[0]==='pa'?'pa':'mult'); render(); return; }
+      if(b.dataset.gdel!==undefined){ const i=+b.dataset.gdel; if(cur.bloques.length>1){ cur.bloques.splice(i,1); render(); } else toast('Debe haber al menos un bloque',true); return; }
+      if(b.dataset.est){ cur.estado=b.dataset.est; render(); return; }
+      if(b.id==='g-add'){ cur.bloques.push(nuevoBloque()); render(); $$('gen-editor').scrollTop=$$('gen-editor').scrollHeight; return; }
+    });
+    $$('gen-savebar').addEventListener('click',e=>{
+      const b=e.target.closest('button'); if(!b) return;
+      if(b.id==='g-prev') preview(); else if(b.id==='g-save') guardar();
+    });
+    $$('gen-pv-download').addEventListener('click',async()=>{
+      let src=$$('gen-sheet-doc'); if(!src){ toast('Nada que exportar',true); return; }
+      const btn=$$('gen-pv-download');
+      if(!cur.numero){ btn.textContent='Guardando…'; btn.disabled=true; await guardar(); if(!cur.numero){ toast('Guarda la cotización primero',true); btn.textContent='⤓ Descargar PDF'; btn.disabled=false; return; } preview(); }
+      src=$$('gen-sheet-doc');
+      const nombre='Cotizacion_'+(cur.numero||'general')+'.pdf';
+      btn.textContent='Generando…'; btn.disabled=true;
+      const holder=document.createElement('div'); holder.style.cssText='position:fixed;left:0;top:0;width:760px;background:#fff;z-index:-1;';
+      const clone=src.cloneNode(true); clone.style.boxShadow='none'; clone.style.borderRadius='0'; clone.style.margin='0';
+      holder.appendChild(clone); document.body.appendChild(holder);
+      try{ await html2pdf().set({margin:8,filename:nombre,image:{type:'jpeg',quality:.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',windowWidth:760,scrollX:0,scrollY:0,x:0,y:0},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(clone).save(); }
+      catch(e){ toast('Error al generar PDF',true); }
+      document.body.removeChild(holder);
+      btn.textContent='⤓ Descargar PDF'; btn.disabled=false;
+    });
+
+    return {nuevo, abrir};
+  })();
+
   const RemodMod=(function(){
     const UNI=['m²','und','ml','glb','día'];
     const $$=id=>document.getElementById(id);
