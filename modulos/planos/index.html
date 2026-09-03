@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<script>if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('emb');</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cotizador — Laios Group</title>
   <meta name="theme-color" content="#132f33">
@@ -249,6 +250,8 @@
 
   /* ====== APP SHELL: login / topbar / dashboard ====== */
   #login-view{position:fixed;inset:0;background:var(--teal);display:flex;align-items:center;justify-content:center;padding:24px;z-index:500;}
+  html.emb #login-view{display:none !important;}
+  html.emb.needlogin #login-view{display:flex !important;}
   .login-card{background:var(--paper);border-radius:16px;padding:30px 26px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,.35);}
   .login-card .lc-brand{font-family:'Anton';font-size:30px;text-transform:uppercase;color:var(--ink);letter-spacing:.03em;}
   .login-card .lc-brand .g{color:var(--gold-ink);}
@@ -858,22 +861,34 @@
     }
 
     // services
-    let arqSub=0, arqRows='';
-    for(let i=0;i<state.niveles;i++){
-      const lvl=i+1, a=getArea(i), rate=tierRate(lvl,r), sub=a*rate; arqSub+=sub;
-      const pct=lvl===1?'':` (${lvl===2?r.f2*100:r.f3*100}%)`;
-      arqRows+=`<div class="rl"><span>Nivel ${lvl} · ${a.toLocaleString('en-US')} m² × ${ppm(rate,r)}${pct}</span><b>${fmt(sub)}</b></div>`;
+    const porNivel = state.metrajeMode==='nivel';
+    function nivelSum(rate){
+      let calc=0, rows='';
+      for(let i=0;i<state.niveles;i++){
+        const lvl=i+1, a=getArea(i), fct=(lvl===1?1:lvl===2?r.f2:r.f3), sub=a*rate*fct; calc+=sub;
+        const pct=lvl===1?'':` (${lvl===2?r.f2*100:r.f3*100}%)`;
+        rows+=`<div class="rl"><span>Nivel ${lvl} · ${a.toLocaleString('en-US')} m² × ${ppm(rate,r)}${pct}</span><b>${fmt(sub)}</b></div>`;
+      }
+      return {calc, rows};
     }
+    function flatSum(rate){
+      const calc=totalM2*rate;
+      return {calc, rows:`<div class="rl"><span>${state.niveles} ${T().niveles} · ${totalM2.toLocaleString('en-US')} m² × ${ppm(rate,r)}</span><b>${fmt(calc)}</b></div>`};
+    }
+    const arqR = porNivel? nivelSum(r.base) : flatSum(r.base);
+    const arqSub=arqR.calc, arqRows=arqR.rows;
     const estBase=totalM2*r.est, estPool=state.piscina?r.pool:0, estCalc=estBase+r.estfix+estPool, estSub=Math.max(estCalc, r.minEst||0);
     let estRows=`<div class="rl"><span>Cálculo estructural · ${totalM2.toLocaleString('en-US')} m² × ${ppm(r.est,r)}</span><b>${fmt(estBase)}</b></div>`+
       `<div class="rl"><span>Elaboración de planos</span><b>${fmt(r.estfix)}</b></div>`+
       (state.piscina?`<div class="rl"><span>Recargo por piscina</span><b>${fmt(estPool)}</b></div>`:'')+
       (estSub>estCalc?`<div class="rl"><span>Mínimo aplicado</span><b>${fmt(estSub)}</b></div>`:'');
-    const elecCalc=totalM2*r.elec, elecSub=Math.max(elecCalc, r.minES);
-    const sanCalc=totalM2*r.san, sanSub=Math.max(sanCalc, r.minES);
+    const elecR = porNivel? nivelSum(r.elec) : flatSum(r.elec);
+    const elecSub=Math.max(elecR.calc, r.minES);
+    const elecRows=elecR.rows+(elecSub>elecR.calc?`<div class="rl"><span>Mínimo aplicado</span><b>${fmt(elecSub)}</b></div>`:'');
+    const sanR = porNivel? nivelSum(r.san) : flatSum(r.san);
+    const sanSub=Math.max(sanR.calc, r.minES);
+    const sanRows=sanR.rows+(sanSub>sanR.calc?`<div class="rl"><span>Mínimo aplicado</span><b>${fmt(sanSub)}</b></div>`:'');
     const papSub=r.pap, tramSub=r.tram;
-    const elecRows=`<div class="rl"><span>Cálculo eléctrico · ${totalM2.toLocaleString('en-US')} m² × ${ppm(r.elec,r)}</span><b>${fmt(elecCalc)}</b></div>`+(elecSub>elecCalc?`<div class="rl"><span>Mínimo aplicado</span><b>${fmt(elecSub)}</b></div>`:'');
-    const sanRows=`<div class="rl"><span>Cálculo sanitario · ${totalM2.toLocaleString('en-US')} m² × ${ppm(r.san,r)}</span><b>${fmt(sanCalc)}</b></div>`+(sanSub>sanCalc?`<div class="rl"><span>Mínimo aplicado</span><b>${fmt(sanSub)}</b></div>`:'');
     const papRows=`<div class="rl"><span>Documentación, impresión y archivos finales</span><b>${fmt(papSub)}</b></div>`;
     const tramRows=`<div class="rl"><span>Gestión de permisos ante Ayuntamiento e instituciones</span><b>${fmt(tramSub)}</b></div>`;
 
@@ -1080,7 +1095,7 @@
   function toast(msg, ok=true){ const t=$('toast'); t.textContent=msg; t.className='toast '+(ok?'':'err')+' show'; setTimeout(()=>t.classList.remove('show'),2800); }
   const showEl=id=>$(id).style.display='', hideEl=id=>$(id).style.display='none';
 
-  function showLogin(){ var h=document.getElementById('embed-login-hide'); if(h) h.remove(); showEl('login-view'); hideEl('app-view'); }
+  function showLogin(){ document.documentElement.classList.add('needlogin'); var h=document.getElementById('embed-login-hide'); if(h) h.remove(); showEl('login-view'); hideEl('app-view'); }
   function showApp(){ hideEl('login-view'); showEl('app-view'); }
   function setNav(w){ $('nav-dash').classList.toggle('active',w==='dash'); $('nav-cli').classList.toggle('active',w==='cli'); $('nav-cot').classList.toggle('active',w==='cot'); }
   function viewDashboard(){ showEl('dashboard-view'); hideEl('clientes-view'); hideEl('cotizador-view'); setNav('dash'); cargarDashboard(); }
