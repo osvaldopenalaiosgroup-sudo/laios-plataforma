@@ -589,6 +589,7 @@
         <div class="gsep"></div>
         <label for="r-min-es">Mínimo elec/san</label><input type="number" id="r-min-es" value="10000">
         <label for="r-min-est">Mínimo estructural</label><input type="number" id="r-min-est" value="18000">
+        <label for="r-render">Precio por render</label><input type="number" id="r-render" value="6000">
         <div class="gsep"></div>
         <label for="r-rate">Tasa USD</label><input type="number" id="r-rate" value="61">
       </div>
@@ -722,8 +723,8 @@
   const state = {
     niveles:1, metrajeMode:'uniforme', areaUniforme:100, areas:[100],
     piscina:true, itbis:false, showDetail:false, cur:'RD', fiscal:false,
-    serviceOrder:['levarq','arq','levest','est','elec','san','pap','tram'],
-    services:{levarq:false,arq:true,levest:false,est:true,elec:true,san:true,pap:true,tram:false},
+    serviceOrder:['levarq','arq','levest','est','elec','san','render','pap','tram'],
+    renderQty:1, services:{levarq:false,arq:true,levest:false,est:true,elec:true,san:true,pap:true,tram:false,render:false},
     process:[
       {title:'Levantamiento', desc:'Medición y registro del sitio', on:true},
       {title:'Anteproyecto', desc:'Propuesta de diseño a aprobar', on:true},
@@ -745,8 +746,8 @@
       ctNormativa:'Normativa', cbNormativa:'Cada plano se entrega conforme a la normativa vigente <strong>(R-021 / MOPC)</strong>, listo para tramitar permisos sin retrabajos. Todo lo anterior está incluido en el total; no se factura ningún cargo por separado.',
       ctValidez:'Validez', cbValidez:'Esta propuesta es válida por <strong>15 días</strong> desde la fecha de emisión.',
       closing:'Aprobada esta propuesta, iniciamos de inmediato con el levantamiento y el anteproyecto.', aprobado:'Aprobado por · Cliente', fechaAccept:'Fecha',
-      svc:{levarq:'Levantamiento arquitectónico',arq:'Diseño y planos arquitectónicos',levest:'Levantamiento estructural',est:'Diseño y planos estructurales',elec:'Diseño y planos eléctricos',san:'Diseño y planos sanitarios',pap:'Papelería y entregables',tram:'Tramitación de permisos'},
-      deliv:{levarq:['Levantamiento arquitectónico del estado actual'],arq:['Diseño arquitectónico y juego de planos'],levest:['Levantamiento estructural del estado actual'],est:['Planos estructurales sellados'],elec:['Planos eléctricos'],san:['Planos sanitarios y pluviales'],pap:['Memoria y documentación técnica','Set impreso + archivos PDF/DWG'],tram:['Gestión de permisos ante Ayuntamiento']} },
+      svc:{levarq:'Levantamiento arquitectónico',arq:'Diseño y planos arquitectónicos',levest:'Levantamiento estructural',est:'Diseño y planos estructurales',elec:'Diseño y planos eléctricos',san:'Diseño y planos sanitarios',render:'Renders 3D',pap:'Papelería y entregables',tram:'Tramitación de permisos'},
+      deliv:{levarq:['Levantamiento arquitectónico del estado actual'],arq:['Diseño arquitectónico y juego de planos'],levest:['Levantamiento estructural del estado actual'],est:['Planos estructurales sellados'],elec:['Planos eléctricos'],san:['Planos sanitarios y pluviales'],render:['Renders 3D del proyecto'],pap:['Memoria y documentación técnica','Set impreso + archivos PDF/DWG'],tram:['Gestión de permisos ante Ayuntamiento']} },
     en:{ cotizacion:'Quotation', factura:'Invoice', dptCot:'Technical design & drawings', dptFac:'Tax credit invoice',
       lblNo:'No.', lblFecha:'Date', lblValida:'Valid', valida:'15 days', cliente:'Client', proyecto:'Project',
       propuesta:'Professional services proposal', rncCedula:'Tax ID: ', niveles:'levels', m2tot:'m² total',
@@ -758,8 +759,8 @@
       ctNormativa:'Code compliance', cbNormativa:'Each drawing is delivered in compliance with current regulations <strong>(R-021 / MOPC)</strong>, ready for permit processing without rework. All of the above is included in the total; no separate charge is billed.',
       ctValidez:'Validity', cbValidez:'This proposal is valid for <strong>15 days</strong> from the date of issue.',
       closing:'Once this proposal is approved, we begin immediately with the survey and preliminary design.', aprobado:'Approved by · Client', fechaAccept:'Date',
-      svc:{levarq:'Architectural survey',arq:'Architectural design & drawings',levest:'Structural survey',est:'Structural design & drawings',elec:'Electrical design & drawings',san:'Plumbing design & drawings',pap:'Documentation & deliverables',tram:'Permit processing'},
-      deliv:{levarq:['Architectural survey of current state'],arq:['Architectural design and drawing set'],levest:['Structural survey of current state'],est:['Stamped structural drawings'],elec:['Electrical drawings'],san:['Plumbing & storm drainage drawings'],pap:['Technical report & documentation','Printed set + PDF/DWG files'],tram:['Permit processing before City Hall']} }
+      svc:{levarq:'Architectural survey',arq:'Architectural design & drawings',levest:'Structural survey',est:'Structural design & drawings',elec:'Electrical design & drawings',san:'Plumbing design & drawings',render:'3D renders',pap:'Documentation & deliverables',tram:'Permit processing'},
+      deliv:{levarq:['Architectural survey of current state'],arq:['Architectural design and drawing set'],levest:['Structural survey of current state'],est:['Stamped structural drawings'],elec:['Electrical drawings'],san:['Plumbing & storm drainage drawings'],render:['3D renders of the project'],pap:['Technical report & documentation','Printed set + PDF/DWG files'],tram:['Permit processing before City Hall']} }
   };
   const T = ()=> DOC_T[docLang];
   const DEFAULT_PROC = {
@@ -800,7 +801,7 @@
     return { base:num('r-base'), f2:num('r-f2')/100, f3:num('r-f3')/100,
       est:num('r-est'), estfix:num('r-estfix'), pool:num('r-pool'),
       elec:num('r-elec'), san:num('r-san'), pap:num('r-pap'), tram:num('r-tram'),
-      levarq:num('r-levarq'), levest:num('r-levest'), minES:num('r-min-es'), minEst:num('r-min-est'), rate:num('r-rate') };
+      levarq:num('r-levarq'), levest:num('r-levest'), minES:num('r-min-es'), minEst:num('r-min-est'), render:num('r-render'), rate:num('r-rate') };
   }
   const tierRate=(lvl,r)=> lvl===1?r.base : lvl===2?r.base*r.f2 : r.base*r.f3;
   const getArea=i=> state.metrajeMode==='uniforme'?state.areaUniforme:(state.areas[i]||0);
@@ -889,6 +890,10 @@
     const sanSub=Math.max(sanR.calc, r.minES);
     const sanRows=sanR.rows+(sanSub>sanR.calc?`<div class="rl"><span>Mínimo aplicado</span><b>${fmt(sanSub)}</b></div>`:'');
     const papSub=r.pap, tramSub=r.tram;
+    const rQty=Math.max(0, Math.floor(Number(state.renderQty)||0));
+    const rIncl=state.services.arq?1:0, rCobr=Math.max(0, rQty-rIncl);
+    const renderSub=rCobr*r.render;
+    const renderRows=`<div class="rl"><span>${rQty} render(s) × ${ppm(r.render,r)}${rIncl?' · 1 incluido con diseño':''}</span><b>${fmt(renderSub)}</b></div>`;
     const papRows=`<div class="rl"><span>Documentación, impresión y archivos finales</span><b>${fmt(papSub)}</b></div>`;
     const tramRows=`<div class="rl"><span>Gestión de permisos ante Ayuntamiento e instituciones</span><b>${fmt(tramSub)}</b></div>`;
 
@@ -905,6 +910,7 @@
         deliv:_t.deliv.levest},
       est:{code:'EST', title:_t.svc.est, sub:estSub, rows:estRows,
         deliv:_t.deliv.est},
+      render:{code:'RND', title:_t.svc.render, sub:renderSub, rows:renderRows, deliv:_t.deliv.render},
       elec:{code:'ELE', title:_t.svc.elec, sub:elecSub, rows:elecRows,
         deliv:_t.deliv.elec},
       san:{code:'SAN', title:_t.svc.san, sub:sanSub, rows:sanRows,
@@ -958,7 +964,7 @@
   $('i-area-uniforme').addEventListener('input',e=>{state.areaUniforme=parseFloat(e.target.value)||0;render();});
 
   // ---- servicios y proceso: listas reordenables ----
-  const SVC_LABEL={levarq:'Levantamiento arquitectónico', arq:'Arquitectónico', levest:'Levantamiento estructural', est:'Estructural', elec:'Eléctrico', san:'Sanitario', pap:'Papelería y entregables', tram:'Tramitación de permisos'};
+  const SVC_LABEL={levarq:'Levantamiento arquitectónico', arq:'Arquitectónico', levest:'Levantamiento estructural', est:'Estructural', elec:'Eléctrico', san:'Sanitario', render:'Renders 3D', pap:'Papelería y entregables', tram:'Tramitación de permisos'};
   function move(arr,i,dir){ const j=i+dir; if(j<0||j>=arr.length) return false; const t=arr[i]; arr[i]=arr[j]; arr[j]=t; return true; }
   function reorderBtns(){ return `<div class="grip" title="Arrastra para reordenar" aria-hidden="true">⠿</div>`; }
 
@@ -1003,6 +1009,7 @@
       row.querySelector('.svc-sw').addEventListener('click',e=>{
         state.services[key]=!state.services[key]; setSwitch(e.currentTarget,state.services[key]);
         const ps=document.getElementById('sub-piscina'); if(key==='est'&&ps) ps.style.display=state.services[key]?'flex':'none';
+        const rs=document.getElementById('sub-render'); if(key==='render'&&rs) rs.style.display=state.services[key]?'flex':'none';
         render();
       });
       list.appendChild(row);
@@ -1011,6 +1018,12 @@
         po.innerHTML=`<span id="piscina-label">¿Incluye piscina?</span><button type="button" class="mini-switch ${state.piscina?'on':''}" id="sw-piscina" role="switch" aria-checked="${state.piscina}" aria-labelledby="piscina-label"><span class="mini-track"></span></button>`;
         po.querySelector('#sw-piscina').addEventListener('click',e=>{ state.piscina=!state.piscina; setSwitch(e.currentTarget,state.piscina); render(); });
         list.appendChild(po);
+      }
+      if(key==='render'){
+        const ro=document.createElement('div'); ro.className='sub-opt'; ro.id='sub-render'; ro.style.display=on?'flex':'none';
+        ro.innerHTML=`<span>Cantidad de renders</span><input type="number" min="0" id="in-render-qty" value="${state.renderQty}" style="width:64px;text-align:center;border:1px solid var(--line-2);border-radius:8px;padding:6px">`;
+        ro.querySelector('#in-render-qty').addEventListener('input',e=>{ state.renderQty=e.target.value; render(); });
+        list.appendChild(ro);
       }
     });
   }
@@ -1064,7 +1077,7 @@
   $('curSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;state.cur=b.dataset.cur;[...e.currentTarget.children].forEach(x=>{const on=x===b;x.classList.toggle('active',on);x.setAttribute('aria-pressed',on?'true':'false');});render();});
 
   // text + rate inputs
-  ['i-cliente','i-proyecto','i-ubic','i-desc','r-base','r-f2','r-f3','r-est','r-estfix','r-pool','r-elec','r-san','r-pap','r-tram','r-levarq','r-levest','r-min-es','r-min-est','r-rate']
+  ['i-cliente','i-proyecto','i-ubic','i-desc','r-base','r-f2','r-f3','r-est','r-estfix','r-pool','r-elec','r-san','r-pap','r-tram','r-levarq','r-levest','r-min-es','r-min-est','r-render','r-rate']
     .forEach(id=>$(id).addEventListener('input',()=>{if(state.metrajeMode==='nivel')buildLevelInputs();render();}));
 
   buildLevelInputs();
@@ -1248,7 +1261,7 @@
   async function logout(){ if(sb) await sb.auth.signOut(); currentQuoteId=null; showLogin(); }
 
   /* ---- TARIFAS BASE (nube) ---- */
-  const RATE_MAP={base:'r-base',f2:'r-f2',f3:'r-f3',est:'r-est',estfix:'r-estfix',pool:'r-pool',elec:'r-elec',san:'r-san',pap:'r-pap',tram:'r-tram',levarq:'r-levarq',levest:'r-levest',minES:'r-min-es',minEst:'r-min-est',rate:'r-rate'};
+  const RATE_MAP={base:'r-base',f2:'r-f2',f3:'r-f3',est:'r-est',estfix:'r-estfix',pool:'r-pool',elec:'r-elec',san:'r-san',pap:'r-pap',tram:'r-tram',levarq:'r-levarq',levest:'r-levest',minES:'r-min-es',minEst:'r-min-est',render:'r-render',rate:'r-rate'};
   function aplicarTarifas(t){ if(!t) return; Object.keys(RATE_MAP).forEach(k=>{ if(t[k]!==undefined && $(RATE_MAP[k])){ let v=t[k]; if(k==='f2'||k==='f3'){ v=v*100; if(v<1) return; } $(RATE_MAP[k]).value=v; } }); render(); }
   async function cargarTarifasBase(){
     if(!sb) return;
@@ -1311,7 +1324,7 @@
     return { cliente:$('i-cliente').value, cliente_id:currentClienteId, proyecto:$('i-proyecto').value, ubic:$('i-ubic').value,
       niveles:state.niveles, metrajeMode:state.metrajeMode, areaUniforme:state.areaUniforme, areas:state.areas.slice(),
       piscina:state.piscina, itbis:state.itbis, showDetail:state.showDetail, cur:state.cur,
-      serviceOrder:state.serviceOrder.slice(), services:Object.assign({},state.services),
+      serviceOrder:state.serviceOrder.slice(), renderQty:state.renderQty, services:Object.assign({},state.services),
       process:state.process.map(p=>Object.assign({},p)), tarifas:rates(), fecha:$('doc-fecha').textContent,
       fiscal:state.fiscal, ncf:($('i-ncf')?$('i-ncf').value:''), rnc_cliente:($('i-rnc-cli')?$('i-rnc-cli').value:''), descuento:num('i-desc'), lang:docLang };
   }
@@ -1319,8 +1332,8 @@
     cliente:'', cliente_id:null, proyecto:'', ubic:'',
     niveles:1, metrajeMode:'uniforme', areaUniforme:100, areas:[100],
     piscina:true, itbis:!!empresaData.itbis_default, showDetail:false, cur:(empresaData.moneda_default==='USD'?'USD':'RD'), fiscal:false, ncf:'', rnc_cliente:'', descuento:0, lang:'es',
-    serviceOrder:['levarq','arq','levest','est','elec','san','pap','tram'],
-    services:{levarq:false,arq:true,levest:false,est:true,elec:true,san:true,pap:true,tram:false},
+    serviceOrder:['levarq','arq','levest','est','elec','san','render','pap','tram'],
+    renderQty:1, services:{levarq:false,arq:true,levest:false,est:true,elec:true,san:true,pap:true,tram:false,render:false},
     process:[ {title:'Levantamiento',desc:'Medición y registro del sitio',on:true},
       {title:'Anteproyecto',desc:'Propuesta de diseño a aprobar',on:true},
       {title:'Planos técnicos',desc:'Juego completo sellado',on:true},
@@ -1330,7 +1343,7 @@
     currentClienteId=s.cliente_id||null;
     state.niveles=s.niveles; state.metrajeMode=s.metrajeMode; state.areaUniforme=s.areaUniforme; state.areas=(s.areas||[]).slice();
     state.piscina=s.piscina; state.itbis=s.itbis; state.showDetail=s.showDetail; state.cur=s.cur;
-    state.serviceOrder=s.serviceOrder.slice(); state.services=Object.assign({},s.services); state.process=s.process.map(p=>Object.assign({},p));
+    state.serviceOrder=s.serviceOrder.slice(); state.renderQty=(s.renderQty!=null?s.renderQty:1); state.services=Object.assign({},s.services); state.process=s.process.map(p=>Object.assign({},p));
     $('i-area-uniforme').value=state.areaUniforme; $('lvl-count').textContent=state.niveles;
     setSwitch($('sw-itbis'),state.itbis); setSwitch($('sw-detail'),state.showDetail);
     document.querySelectorAll('#curSeg button').forEach(b=>{const on=b.dataset.cur===state.cur;b.classList.toggle('active',on);b.setAttribute('aria-pressed',on);});
