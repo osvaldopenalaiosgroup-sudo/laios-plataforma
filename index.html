@@ -683,6 +683,7 @@
   // ================= MÓDULO REMODELACIÓN (fusionado, sin iframe) =================
   const GenMod=(function(){
     const $$=id=>document.getElementById(id);
+    const fechaHoy=()=>new Date().toLocaleDateString('es-DO',{day:'2-digit',month:'short',year:'numeric'});
     let cur=null, curId=null;
     const blocAmt=b=> b.modo==='pa'?(Number(b.pa)||0):(Number(b.cant)||0)*(Number(b.precio)||0);
     const subtotal=()=>cur.bloques.reduce((s,b)=>s+blocAmt(b),0);
@@ -715,7 +716,7 @@
         const det= b.modo==='pa'
           ? '<div class="nums"><div class="nb pa"><small>Monto total (PA)</small><input inputmode="decimal" value="'+(b.pa==null?'':b.pa)+'" data-gk="pa" data-gi="'+i+'"></div><div class="subb"><small>Subt.</small><b>'+fmt(blocAmt(b))+'</b></div></div>'
           : '<div class="nums"><div class="nb qty"><small>Cant.</small><input inputmode="decimal" value="'+(b.cant==null?'':b.cant)+'" data-gk="cant" data-gi="'+i+'"></div><div class="times">×</div><div class="nb cost"><small>Precio</small><input inputmode="decimal" value="'+(b.precio==null?'':b.precio)+'" data-gk="precio" data-gi="'+i+'"></div><div class="subb"><small>Subt.</small><b>'+fmt(blocAmt(b))+'</b></div></div>';
-        return '<div class="espacio"><div class="esp-head"><div class="esp-icon">▤</div><input class="esp-name" placeholder="Título (ej. Levantamiento arquitectónico)" value="'+esc(b.titulo)+'" data-gk="titulo" data-gi="'+i+'"><button class="x-btn" data-gdel="'+i+'">✕</button></div><div class="pd-lbl">Descripción (va en el PDF del cliente)</div><textarea class="part-desc" data-gk="desc" data-gi="'+i+'" placeholder="Detalle de lo que se hará...">'+esc(b.desc)+'</textarea><div class="it-top" style="margin-top:10px">'+modes+'</div>'+det+'</div>';
+        return '<div class="espacio"><div class="esp-head"><div class="esp-icon">▤</div><input class="esp-name" placeholder="Título (ej. Levantamiento arquitectónico)" value="'+esc(b.titulo)+'" data-gk="titulo" data-gi="'+i+'"><button class="x-btn" data-gdel="'+i+'">✕</button></div><div class="pd-lbl">Descripción — párrafos y viñetas (va en el PDF)</div><textarea class="part-desc" data-gk="desc" data-gi="'+i+'" rows="5" placeholder="Detalle de lo que se hará. Puedes poner varios párrafos, y viñetas o números escribiéndolos (ej. • o 1.)">'+esc(b.desc)+'</textarea><div class="it-top" style="margin-top:10px">'+modes+'</div>'+det+'</div>';
       }).join('');
       const itbisHTML='<div class="opt-card"><div class="opt-h">Impuestos</div><div class="opt-row"><label class="switch"><input type="checkbox" id="g-itbis" '+(cur.itbis?'checked':'')+'> Aplicar ITBIS (18%)</label><div class="opt-amt">'+fmt(itbisMonto())+'</div></div></div>';
       $$('gen-editor').innerHTML=meta+estadoHTML+bloq+'<button class="add-esp" id="g-add"><span class="g">+</span> Agregar bloque</button>'+itbisHTML;
@@ -726,7 +727,7 @@
 
     function preview(){
       const st=subtotal(), itb=itbisMonto(), tot=totalFinal();
-      const blocks=cur.bloques.map(b=>'<div class="cl-esp"><div class="cl-top"><div class="cl-name">'+esc(b.titulo||'—')+'</div><div class="cl-amt">'+fmt(blocAmt(b))+'</div></div>'+(b.desc&&b.desc.trim()?'<div class="cl-desc">'+esc(b.desc.trim())+'</div>':'')+'</div>').join('');
+      const blocks=cur.bloques.map(b=>'<div class="cl-esp"><div class="cl-top"><div class="cl-name">'+esc(b.titulo||'—')+'</div><div class="cl-amt">'+fmt(blocAmt(b))+'</div></div>'+(b.desc&&b.desc.trim()?'<div class="cl-desc" style="white-space:pre-line">'+esc(b.desc.trim())+'</div>':'')+'</div>').join('');
       const totHTML=cur.itbis
         ? '<div class="sh-tr"><span>Subtotal</span><span>'+fmt(st)+'</span></div><div class="sh-tr"><span>ITBIS (18%)</span><span>'+fmt(itb)+'</span></div><div class="sh-tr big"><span>Total</span><span class="tot-v">'+fmt(tot)+'</span></div>'
         : '<div class="sh-tr big"><span>Total</span><span class="tot-v">'+fmt(st)+'</span></div>';
@@ -842,7 +843,7 @@
             }).join('');
             return '<div class="acapite"><div class="acap-head"><input class="acap-name" placeholder="Acápite" value="'+esc(a.nombre)+'" data-k="anombre" data-e="'+ei+'" data-p="'+pi+'" data-a="'+ai+'"><button class="x-btn" data-del="acap:'+ei+':'+pi+':'+ai+'">✕</button></div>'+items+'<div class="acap-foot"><button class="mini-btn" data-add="item:'+ei+':'+pi+':'+ai+'">+ Ítem</button><div class="acap-sub">Acápite: <b>'+fmt(acapTot(a))+'</b></div></div></div>';
           }).join('');
-          return '<div class="partida"><div class="part-head"><input class="part-name" placeholder="Partida" value="'+esc(p.nombre)+'" data-k="pnombre" data-e="'+ei+'" data-p="'+pi+'"><button class="x-btn" data-del="part:'+ei+':'+pi+'">✕</button></div><div class="pd-lbl">Descripción (va en el PDF del cliente)</div><textarea class="part-desc" data-k="pdesc" data-e="'+ei+'" data-p="'+pi+'" placeholder="Qué se hará en esta partida...">'+esc(p.desc)+'</textarea>'+acaps+'<button class="add-row" data-add="acap:'+ei+':'+pi+'">+ Acápite</button><div class="part-sub">Subtotal partida: <b>'+fmt(partTot(p))+'</b></div></div>';
+          return '<div class="partida"><div class="part-head"><input class="part-name" placeholder="Partida" value="'+esc(p.nombre)+'" data-k="pnombre" data-e="'+ei+'" data-p="'+pi+'"><button class="x-btn" data-del="part:'+ei+':'+pi+'">✕</button></div><div class="pd-lbl">Descripción — párrafos y viñetas (va en el PDF)</div><textarea class="part-desc" data-k="pdesc" data-e="'+ei+'" data-p="'+pi+'" placeholder="Qué se hará en esta partida...">'+esc(p.desc)+'</textarea>'+acaps+'<button class="add-row" data-add="acap:'+ei+':'+pi+'">+ Acápite</button><div class="part-sub">Subtotal partida: <b>'+fmt(partTot(p))+'</b></div></div>';
         }).join('');
         return '<div class="espacio"><div class="esp-head"><div class="esp-icon">▦</div><input class="esp-name" placeholder="Espacio (baño, cocina...)" value="'+esc(esp.nombre)+'" data-k="enombre" data-e="'+ei+'"><button class="x-btn" data-del="esp:'+ei+'">✕</button></div>'+parts+'<button class="add-row" data-add="part:'+ei+'">+ Partida</button><div class="esp-sub">Subtotal espacio: <b>'+fmt(espTot(esp))+'</b></div></div>';
       }).join('');
